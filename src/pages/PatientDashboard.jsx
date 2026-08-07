@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, doc, onSnapshot, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import AIChat from '../components/AIChat';
 import { ToastContainer, showToast } from '../components/Toast';
+import PrescriptionModal from '../components/PrescriptionModal';
+import VideoConsultationModal from '../components/VideoConsultationModal';
 
 const DEMO_SCHEDULE = [
   { id: 0, time: '7:00 AM', name: 'BP Tablet', detail: 'Amlodipine 5mg · After food', icon: '💊', color: 'var(--primary-light)', done: true },
@@ -15,7 +15,7 @@ const DEMO_SCHEDULE = [
 ];
 
 export default function PatientDashboard() {
-  const { currentUser, userProfile, isDemoMode } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const profile = userProfile || currentUser || {};
   const [schedule, setSchedule] = useState(DEMO_SCHEDULE);
   const [score, setScore] = useState(profile.recoveryScore || 91);
@@ -23,12 +23,15 @@ export default function PatientDashboard() {
   const [waMsg, setWaMsg] = useState('');
   const [activeTab, setActiveTab] = useState('home');
 
+  const [activeRx, setActiveRx] = useState(null);
+  const [videoCallActive, setVideoCallActive] = useState(false);
+
   useEffect(() => {
-    // Show WhatsApp reminder after 4 seconds
+    // Show WhatsApp reminder after 3 seconds
     const t = setTimeout(() => {
       setWaMsg("⏰ Reminder: It's 1:00 PM — Time for Antibiotic (Amoxicillin 500mg). Reply 'Taken' or tap to confirm.");
       setWaVisible(true);
-    }, 4000);
+    }, 3000);
     return () => clearTimeout(t);
   }, []);
 
@@ -57,14 +60,36 @@ export default function PatientDashboard() {
   const tabs = [
     { id: 'home', label: 'Home', icon: 'fa-house' },
     { id: 'chat', label: 'AI Chat', icon: 'fa-robot' },
-    { id: 'reports', label: 'Reports', icon: 'fa-file-medical' },
+    { id: 'reports', label: 'Prescriptions & Reports', icon: 'fa-file-medical' },
   ];
 
   return (
     <div className="page" style={{ background: 'var(--bg)' }}>
       <ToastContainer />
 
-      {/* WA Float */}
+      {/* Prescription PDF Modal */}
+      {activeRx && (
+        <PrescriptionModal
+          rx={activeRx}
+          patient={{ name: profile.displayName || 'Rahul Sharma', age: 42, gender: 'Male', id: 'MT001' }}
+          onClose={() => setActiveRx(null)}
+        />
+      )}
+
+      {/* Telehealth Video Call Modal */}
+      {videoCallActive && (
+        <VideoConsultationModal
+          patientName={profile.displayName || 'Rahul Sharma'}
+          doctorName="Dr. Arjun Mehta"
+          onClose={() => setVideoCallActive(false)}
+          onGenerateRx={(newRx) => {
+            setActiveRx(newRx);
+            showToast('Prescription updated from Telehealth consult!', 'success');
+          }}
+        />
+      )}
+
+      {/* WhatsApp Floating Alert */}
       <div className={`wa-float ${waVisible ? 'show' : ''}`}>
         <span style={{ fontSize: '1.2rem' }}>💬</span>
         <div style={{ flex: 1 }}>
@@ -82,8 +107,11 @@ export default function PatientDashboard() {
             <h1 style={{ fontSize: '1.8rem', margin: 0 }}>{profile.displayName || 'Rahul Sharma'} 👋</h1>
             <div style={{ fontSize: '.84rem', color: 'var(--text2)', marginTop: 4 }}>Day {profile.recoveryDay || 4} of {profile.recoveryTotal || 14} · Recovery Plan Active</div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Link to="/patient/book" className="btn btn-primary"><i className="fa-solid fa-calendar-plus"></i> Book Appointment</Link>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={() => setVideoCallActive(true)}>
+              <i className="fa-solid fa-video"></i> Video Consult
+            </button>
+            <Link to="/patient/book" className="btn btn-outline"><i className="fa-solid fa-calendar-plus"></i> Book Appt</Link>
             <Link to="/patient/recovery" className="btn btn-outline"><i className="fa-solid fa-heart-pulse"></i> Recovery</Link>
           </div>
         </div>
@@ -98,175 +126,176 @@ export default function PatientDashboard() {
                   <circle cx="36" cy="36" r="32" fill="none" stroke="#34e8a8" strokeWidth="6" strokeLinecap="round"
                     strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: 'stroke-dashoffset 1s ease' }} />
                 </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{score}</span>
-                  <span style={{ fontSize: '.55rem', color: 'rgba(255,255,255,.7)' }}>/100</span>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
+                  {score}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '.72rem', color: 'rgba(255,255,255,.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>Recovery Score</div>
-                <div style={{ fontSize: '.84rem', color: 'rgba(255,255,255,.85)', marginTop: 4 }}>Day {profile.recoveryDay || 4} of {profile.recoveryTotal || 14}</div>
+                <div style={{ fontSize: '.75rem', opacity: .8 }}>DIGITAL TWIN SCORE</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, margin: '2px 0' }}>{score >= 85 ? 'Excellent Recovery' : 'Moderate Adherence'}</div>
+                <div style={{ fontSize: '.72rem', opacity: .8 }}>Top 5% recovery trajectory</div>
               </div>
             </div>
           </div>
+
           <div className="stat-card">
-            <span className="stat-val" style={{ color: adherence >= 80 ? 'var(--secondary)' : 'var(--amber)' }}>{adherence}%</span>
-            <div className="stat-lbl">Med Adherence Today</div>
-            <div className="progress-track" style={{ marginTop: 10 }}><div className="progress-fill progress-green" style={{ width: `${adherence}%` }} /></div>
+            <div className="stat-icon" style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}><i className="fa-solid fa-pills"></i></div>
+            <div>
+              <div className="stat-num">{adherence}%</div>
+              <div className="stat-label">Today's Med Adherence</div>
+              <div className="progress-track" style={{ marginTop: 6, width: 100 }}>
+                <div className="progress-fill progress-green" style={{ width: `${adherence}%` }}></div>
+              </div>
+            </div>
           </div>
+
           <div className="stat-card">
-            <span className="stat-val" style={{ color: 'var(--primary)' }}>6 days</span>
-            <div className="stat-lbl">Until Next Appointment</div>
-            <div style={{ fontSize: '.78rem', color: 'var(--primary)', marginTop: 6, fontWeight: 600 }}>📅 Dr. Priya Nair · Aug 12</div>
+            <div className="stat-icon" style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}><i className="fa-solid fa-calendar-check"></i></div>
+            <div>
+              <div className="stat-num">Aug 20</div>
+              <div className="stat-label">Next Video Follow-up</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--text2)', marginTop: 4 }}>Dr. Arjun Mehta · Cardiology</div>
+            </div>
           </div>
+
           <div className="stat-card">
-            <span className="stat-val" style={{ color: 'var(--teal)' }}>87/100</span>
-            <div className="stat-lbl">Trust Score</div>
-            <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: 6 }}>Dr. Arjun Mehta — Excellent</div>
+            <div className="stat-icon" style={{ background: 'var(--amber-light)', color: 'var(--amber)' }}><i className="fa-solid fa-shield-heart"></i></div>
+            <div>
+              <div className="stat-num">98%</div>
+              <div className="stat-label">AI Trust Metric</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--text2)', marginTop: 4 }}>Doctor-Patient Sync High</div>
+            </div>
           </div>
         </div>
 
-        {/* Tab Nav */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#fff', padding: 6, borderRadius: 99, border: '1px solid var(--border)', width: 'fit-content' }}>
+        {/* Tab Selection */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
           {tabs.map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)}
-              className={`btn btn-sm ${activeTab === t.id ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 99 }}>
+            <button key={t.id} className={`btn ${activeTab === t.id ? 'btn-primary' : 'btn-outline'}`} onClick={() => setActiveTab(t.id)}>
               <i className={`fa-solid ${t.icon}`}></i> {t.label}
             </button>
           ))}
         </div>
 
-        {/* Home Tab */}
+        {/* Tab 1: Home Schedule */}
         {activeTab === 'home' && (
           <div className="dash-grid">
-            <div className="dash-sidebar">
-              {/* Today's Schedule */}
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--borderl)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '.88rem', fontWeight: 700 }}>📋 Today's Schedule</span>
-                  <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>{done}/{schedule.length} done</span>
-                </div>
-                {schedule.map(item => (
-                  <div key={item.id} className={`sched-item ${item.done ? 'done' : ''}`}>
-                    <span className="sched-time">{item.time}</span>
-                    <div className="sched-icon" style={{ background: item.color }}>{item.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div className="sched-name">{item.name}</div>
-                      <div className="sched-detail">{item.detail}</div>
-                    </div>
-                    <div className={`sched-check ${item.done ? 'checked' : ''}`} onClick={() => !item.done && markDone(item.id)}>✓</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Next Appointment */}
+            <div className="dash-main">
               <div className="card">
-                <div style={{ fontSize: '.88rem', fontWeight: 700, marginBottom: 14 }}>📅 Next Appointment</div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 46, height: 46, background: 'var(--primary-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>👩‍⚕️</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '.88rem' }}>Dr. Priya Nair</div>
-                    <div style={{ fontSize: '.74rem', color: 'var(--primary)', fontWeight: 600 }}>Cardiologist</div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--text2)', marginTop: 2 }}>📅 Aug 12 · 11:00 AM · Video Consult</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                  <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: 'center' }}>Join Call</button>
-                  <Link to="/patient/book" className="btn btn-outline btn-sm">Reschedule</Link>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Recovery Progress */}
-              <div className="card">
-                <div style={{ fontWeight: 700, marginBottom: 16 }}>📊 Recovery Progress</div>
-                {[
-                  { label: 'Medication Adherence', val: adherence, color: 'progress-green' },
-                  { label: 'Symptom Score', val: 82, color: 'progress-blue' },
-                  { label: 'Activity Goals', val: 75, color: 'progress-gradient' },
-                  { label: 'Sleep Quality', val: 85, color: 'progress-green' },
-                ].map(m => (
-                  <div key={m.label} style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', marginBottom: 6 }}>
-                      <span style={{ fontWeight: 500 }}>{m.label}</span>
-                      <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{m.label === 'Medication Adherence' ? adherence : m.val}%</span>
-                    </div>
-                    <div className="progress-track"><div className={`progress-fill ${m.color}`} style={{ width: `${m.label === 'Medication Adherence' ? adherence : m.val}%` }} /></div>
-                  </div>
-                ))}
-              </div>
-
-              {/* AI Insight */}
-              <div className="card" style={{ background: 'linear-gradient(135deg, var(--primary-light), var(--teal-light))', border: '1px solid rgba(26,115,232,.15)' }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 40, height: 40, background: 'var(--primary)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🤖</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--primary)', marginBottom: 6 }}>AI Health Insight</div>
-                    <p style={{ fontSize: '.84rem', lineHeight: 1.6, color: 'var(--text)' }}>
-                      Your recovery is on track! Medication adherence is excellent at {adherence}%. Keep up the morning walks and physiotherapy. Dr. Priya Nair has been notified of your excellent progress. Recovery score of {score}/100 is above average for Day {profile.recoveryDay || 4}. 🎉
-                    </p>
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>📋 Today's Medication & Care Schedule</h3>
+                    <div style={{ fontSize: '.78rem', color: 'var(--text2)' }}>Click checkmark when completed</div>
                   </div>
+                  <span className="badge badge-green">{done}/{schedule.length} Completed</span>
                 </div>
-              </div>
 
-              {/* Quick Actions */}
-              <div className="card">
-                <div style={{ fontWeight: 700, marginBottom: 14 }}>⚡ Quick Actions</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                  {[
-                    { icon: '🆘', label: 'Emergency SOS', color: 'var(--red)', bg: 'var(--red-light)' },
-                    { icon: '💬', label: 'Ask AI Doctor', color: 'var(--primary)', bg: 'var(--primary-light)', action: () => setActiveTab('chat') },
-                    { icon: '📷', label: 'Upload Report', color: 'var(--teal)', bg: 'var(--teal-light)' },
-                    { icon: '💊', label: 'View Prescription', color: 'var(--secondary)', bg: 'var(--secondary-light)' },
-                  ].map(a => (
-                    <button key={a.label} onClick={a.action} style={{ padding: '14px 10px', border: `1px solid ${a.bg}`, borderRadius: 12, background: a.bg, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, transition: 'all .2s' }}
-                      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                      onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                      <span style={{ fontSize: '1.4rem' }}>{a.icon}</span>
-                      <span style={{ fontSize: '.75rem', fontWeight: 700, color: a.color }}>{a.label}</span>
-                    </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {schedule.map(s => (
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 10, background: s.done ? 'var(--bg)' : '#fff', border: '1px solid var(--border)', opacity: s.done ? 0.75 : 1 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 10, background: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                        {s.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <strong style={{ fontSize: '.9rem', textDecoration: s.done ? 'line-through' : 'none' }}>{s.name}</strong>
+                          <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>• {s.time}</span>
+                        </div>
+                        <div style={{ fontSize: '.78rem', color: 'var(--text2)' }}>{s.detail}</div>
+                      </div>
+                      <button
+                        onClick={() => markDone(s.id)}
+                        disabled={s.done}
+                        className={`btn btn-sm ${s.done ? 'btn-outline' : 'btn-primary'}`}
+                        style={{ borderRadius: 20 }}
+                      >
+                        {s.done ? '✓ Completed' : 'Mark Taken'}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* AI Chat Tab */}
-        {activeTab === 'chat' && (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 34, height: 34, background: 'rgba(255,255,255,.18)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🤖</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '.9rem' }}>MediTrust AI Assistant</div>
-                <div style={{ fontSize: '.7rem', opacity: .8 }}>● Online · Powered by Gemini AI</div>
+            {/* Sidebar */}
+            <div className="dash-sidebar">
+              <div className="card">
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '.9rem' }}>📄 Digital Prescriptions</h4>
+                <p style={{ fontSize: '.8rem', color: 'var(--text2)', lineHeight: 1.5 }}>
+                  View, download, or print official hospital prescriptions generated by Dr. Arjun Mehta & AI Medical Scribe.
+                </p>
+                <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setActiveRx({})}>
+                  <i className="fa-solid fa-file-prescription"></i> View Latest Rx (PDF)
+                </button>
+              </div>
+
+              <div className="card">
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '.9rem' }}>📹 Scheduled Video Consultation</h4>
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 8, fontSize: '.8rem', marginBottom: 12 }}>
+                  <div><strong>Dr. Arjun Mehta</strong></div>
+                  <div style={{ color: 'var(--text2)', fontSize: '.75rem' }}>Today at 10:30 AM · Cardiology</div>
+                </div>
+                <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setVideoCallActive(true)}>
+                  <i className="fa-solid fa-video"></i> Launch Video Room
+                </button>
               </div>
             </div>
-            <AIChat sessionId={currentUser?.uid ? `session-${currentUser.uid}` : null} />
           </div>
         )}
 
-        {/* Reports Tab */}
-        {activeTab === 'reports' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-            {[
-              { name: 'Blood Report', date: 'Jul 28, 2026', icon: '🩸', status: 'Normal', color: 'var(--secondary)' },
-              { name: 'ECG Report', date: 'Jul 25, 2026', icon: '📈', status: 'Reviewed', color: 'var(--primary)' },
-              { name: 'Chest X-Ray', date: 'Jul 22, 2026', icon: '🫁', status: 'Normal', color: 'var(--secondary)' },
-              { name: 'MRI Scan', date: 'Jun 15, 2026', icon: '🧠', status: 'Archived', color: 'var(--text3)' },
-            ].map(r => (
-              <div key={r.name} className="card card-hover" style={{ cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center' }}>
-                <div style={{ width: 46, height: 46, background: 'var(--primary-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>{r.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '.88rem' }}>{r.name}</div>
-                  <div style={{ fontSize: '.74rem', color: 'var(--text2)' }}>{r.date}</div>
-                </div>
-                <span className="badge badge-green" style={{ color: r.color, background: 'transparent', border: `1px solid ${r.color}` }}>{r.status}</span>
-              </div>
-            ))}
+        {/* Tab 2: AI Chat */}
+        {activeTab === 'chat' && (
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>🤖 AI Symptom Intelligence & Clinical Chat</h3>
+            <p style={{ fontSize: '.84rem', color: 'var(--text2)', marginBottom: 20 }}>
+              Discuss your symptoms with our Gemini-powered AI engine. Guidance is automatically sent to your attending physician.
+            </p>
+            <AIChat />
           </div>
         )}
+
+        {/* Tab 3: Reports & Prescriptions */}
+        {activeTab === 'reports' && (
+          <div className="card">
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>🏥 Official Health Records & Digital Prescriptions</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 16 }}>
+              <div style={{ border: '1px solid var(--border)', padding: 16, borderRadius: 10, background: 'var(--bg)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span className="badge badge-green">Official Rx</span>
+                    <h4 style={{ margin: '8px 0 4px 0', fontSize: '.95rem' }}>Cardiology Prescribed Plan</h4>
+                    <div style={{ fontSize: '.78rem', color: 'var(--text2)' }}>Dr. Arjun Mehta · Aug 6, 2026</div>
+                  </div>
+                  <span style={{ fontSize: '1.5rem' }}>📜</span>
+                </div>
+                <div style={{ fontSize: '.78rem', marginTop: 12, color: 'var(--text2)' }}>
+                  Amlodipine 5mg, Atorvastatin 20mg, Metoprolol 25mg · ICD-10 I11.9
+                </div>
+                <button className="btn btn-primary btn-sm" style={{ marginTop: 14, width: '100%' }} onClick={() => setActiveRx({})}>
+                  <i className="fa-solid fa-print"></i> View / Download Printable PDF
+                </button>
+              </div>
+
+              <div style={{ border: '1px solid var(--border)', padding: 16, borderRadius: 10, background: 'var(--bg)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span className="badge badge-blue">Lab Summary</span>
+                    <h4 style={{ margin: '8px 0 4px 0', fontSize: '.95rem' }}>Lipid Profile & ECG Report</h4>
+                    <div style={{ fontSize: '.78rem', color: 'var(--text2)' }}>Apollo Diagnostics · Aug 5, 2026</div>
+                  </div>
+                  <span style={{ fontSize: '1.5rem' }}>📊</span>
+                </div>
+                <div style={{ fontSize: '.78rem', marginTop: 12, color: 'var(--text2)' }}>
+                  Total Cholesterol: 210 mg/dL | ECG: Sinus Tachycardia
+                </div>
+                <button className="btn btn-outline btn-sm" style={{ marginTop: 14, width: '100%' }} onClick={() => showToast('Downloading ECG & Lipid Lab PDF...', 'info')}>
+                  <i className="fa-solid fa-download"></i> Download Lab Report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

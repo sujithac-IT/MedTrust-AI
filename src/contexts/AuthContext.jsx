@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Demo user for when Firebase is not configured
+  // Demo user catalog supporting all 6 healthcare roles
   const demoUsers = {
     'patient@demo.com': {
       uid: 'demo-patient-001',
@@ -31,9 +31,6 @@ export function AuthProvider({ children }) {
       role: 'patient',
       phone: '+91 98765 43210',
       condition: 'Hypertension',
-      doctorId: 'demo-doctor-001',
-      recoveryDay: 4,
-      recoveryTotal: 14,
       recoveryScore: 91,
     },
     'doctor@demo.com': {
@@ -43,19 +40,42 @@ export function AuthProvider({ children }) {
       role: 'doctor',
       specialty: 'Cardiologist',
       hospital: 'Apollo Hospital',
-      experience: '12 years',
+    },
+    'nurse@demo.com': {
+      uid: 'demo-nurse-001',
+      email: 'nurse@demo.com',
+      displayName: 'Sister Anitha',
+      role: 'nurse',
+      ward: 'Ward Station 4B',
+      hospital: 'Apollo Hospital',
+    },
+    'pharmacist@demo.com': {
+      uid: 'demo-pharmacist-001',
+      email: 'pharmacist@demo.com',
+      displayName: 'Rajesh Kannan',
+      role: 'pharmacist',
+      license: 'PH-2024-912',
+      hospital: 'Apollo Hospital',
     },
     'admin@demo.com': {
       uid: 'demo-admin-001',
       email: 'admin@demo.com',
-      displayName: 'Admin',
+      displayName: 'Command Admin',
       role: 'admin',
-      hospital: 'Apollo Hospital',
+      hospital: 'Apollo Hospital Command Center',
+    },
+    'family@demo.com': {
+      uid: 'demo-family-001',
+      email: 'family@demo.com',
+      displayName: 'Priya Sharma',
+      role: 'family',
+      relation: 'Spouse',
+      patientId: 'demo-patient-001',
     },
   };
 
   const isDemoMode = !import.meta.env.VITE_FIREBASE_API_KEY || 
-    import.meta.env.VITE_FIREBASE_API_KEY === 'your-api-key-here';
+    import.meta.env.VITE_FIREBASE_API_KEY === 'demo-api-key';
 
   async function signup(email, password, role, displayName) {
     if (isDemoMode) {
@@ -73,15 +93,33 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     if (isDemoMode) {
-      const demo = demoUsers[email];
-      if (demo && password === 'demo1234') {
-        setCurrentUser(demo);
-        setUserProfile(demo);
-        return demo;
-      }
-      throw new Error('Invalid credentials. Use demo@medtrust.ai / demo1234');
+      const demo = demoUsers[email] || {
+        uid: 'custom-demo-' + Date.now(),
+        email,
+        displayName: email.split('@')[0],
+        role: email.includes('doctor') ? 'doctor' : email.includes('nurse') ? 'nurse' : email.includes('pharmacist') ? 'pharmacist' : email.includes('family') ? 'family' : email.includes('admin') ? 'admin' : 'patient'
+      };
+      setCurrentUser(demo);
+      setUserProfile(demo);
+      return demo;
     }
     return signInWithEmailAndPassword(auth, email, password);
+  }
+
+  async function switchDemoRole(roleKey) {
+    const roleMap = {
+      patient: 'patient@demo.com',
+      doctor: 'doctor@demo.com',
+      nurse: 'nurse@demo.com',
+      pharmacist: 'pharmacist@demo.com',
+      admin: 'admin@demo.com',
+      family: 'family@demo.com',
+    };
+    const email = roleMap[roleKey] || 'patient@demo.com';
+    const demo = demoUsers[email];
+    setCurrentUser(demo);
+    setUserProfile(demo);
+    return demo;
   }
 
   async function loginWithGoogle() {
@@ -100,31 +138,20 @@ export function AuthProvider({ children }) {
         email: result.user.email,
         displayName: result.user.displayName,
         role: 'patient',
-        createdAt: serverTimestamp(),
+        createdAt: serverTimestamp()
       });
+      setUserProfile({ role: 'patient' });
+    } else {
+      setUserProfile(userDoc.data());
     }
     return result;
   }
 
   async function logout() {
-    if (isDemoMode) {
-      setCurrentUser(null);
-      setUserProfile(null);
-      return;
-    }
-    return signOut(auth);
-  }
-
-  async function fetchUserProfile(user) {
-    if (isDemoMode) return;
-    try {
-      const docRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setUserProfile(docSnap.data());
-      }
-    } catch (e) {
-      console.warn('Could not fetch user profile:', e.message);
+    setCurrentUser(null);
+    setUserProfile(null);
+    if (!isDemoMode) {
+      await signOut(auth);
     }
   }
 
@@ -135,21 +162,32 @@ export function AuthProvider({ children }) {
     }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) await fetchUserProfile(user);
-      else setUserProfile(null);
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data());
+          }
+        } catch (e) {
+          console.warn("User profile fetch notice:", e);
+        }
+      } else {
+        setUserProfile(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [isDemoMode]);
 
   const value = {
     currentUser,
     userProfile,
+    isDemoMode,
     signup,
     login,
+    switchDemoRole,
     loginWithGoogle,
-    logout,
-    isDemoMode,
+    logout
   };
 
   return (

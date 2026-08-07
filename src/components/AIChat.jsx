@@ -2,28 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-
-const AI_RESPONSES = {
-  'chest pain': ["I understand. How long have you had this pain?", "Does it radiate to your left arm or jaw?", "Are you experiencing shortness of breath? Based on your symptoms, I recommend a Cardiologist consultation. 🏥"],
-  'headache': ["I'm sorry to hear that. Is it throbbing or constant?", "Any fever or stiff neck with it?", "I recommend a Neurologist. Would you like to book an appointment? 🧠"],
-  'fever': ["Let me help. What is your temperature?", "Any cough, body pain, or rash?", "I recommend an urgent General Physician consultation. 🌡️"],
-  'back pain': ["Is the pain localized or does it radiate to legs?", "Does it worsen when sitting or bending?", "An Orthopaedic specialist would be best. Shall I book? 🦴"],
-  'breathing': ["This is serious. How severe is it?", "Do you have chest tightness or wheezing?", "⚠️ This needs urgent attention. I'm prioritizing an Emergency consultation."],
-  'default': ["Thank you for sharing. How long have you had this?", "Any other symptoms alongside this?", "I'll recommend the most appropriate specialist. One moment..."]
-};
+import { callGemini } from '../utils/gemini';
 
 export default function AIChat({ sessionId, compact = false }) {
-  const { currentUser, userProfile, isDemoMode } = useAuth();
+  const { currentUser, isDemoMode } = useAuth();
   const [messages, setMessages] = useState([
-    { id: 'init', role: 'ai', text: "Hello! I'm your AI Health Assistant powered by MediTrust AI. Describe your symptoms and I'll guide you to the right specialist. 😊", time: new Date() }
+    { id: 'init', role: 'ai', text: "Hello! I'm your MediTrust AI Clinical Assistant. Describe your symptoms and I'll analyze them with clinical intelligence. 😊", time: new Date() }
   ]);
   const [input, setInput] = useState('');
-  const [chatState, setChatState] = useState({});
+  const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, loading]);
 
   useEffect(() => {
     if (isDemoMode || !sessionId) return;
@@ -33,34 +25,43 @@ export default function AIChat({ sessionId, compact = false }) {
       if (msgs.length > 0) setMessages(msgs);
     });
     return unsub;
-  }, [sessionId]);
+  }, [sessionId, isDemoMode]);
 
   const sendMessage = async (text) => {
-    if (!text.trim()) return;
-    const userMsg = { id: Date.now() + 'u', role: 'user', text: text.trim(), time: new Date() };
+    if (!text.trim() || loading) return;
+    const userText = text.trim();
+    const userMsg = { id: Date.now() + 'u', role: 'user', text: userText, time: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setLoading(true);
 
     if (!isDemoMode && sessionId) {
-      await addDoc(collection(db, 'chats', sessionId, 'messages'), {
-        role: 'user', text: text.trim(), timestamp: serverTimestamp(),
-        userId: currentUser?.uid
-      });
+      try {
+        await addDoc(collection(db, 'chats', sessionId, 'messages'), {
+          role: 'user', text: userText, timestamp: serverTimestamp(),
+          userId: currentUser?.uid
+        });
+      } catch (err) {
+        console.warn("Firestore message log notice:", err);
+      }
     }
 
-    // AI response
-    setTimeout(() => {
-      const lower = text.toLowerCase();
-      let key = 'default';
-      for (const k of Object.keys(AI_RESPONSES)) {
-        if (k !== 'default' && lower.includes(k)) { key = k; break; }
-      }
-      const responses = AI_RESPONSES[key];
-      const idx = (chatState[key] || 0) % responses.length;
-      setChatState(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-      const aiMsg = { id: Date.now() + 'a', role: 'ai', text: responses[idx], time: new Date() };
+    // Call Gemini AI
+    try {
+      const aiResponseText = await callGemini(userText);
+      const aiMsg = { id: Date.now() + 'a', role: 'ai', text: aiResponseText, time: new Date() };
       setMessages(prev => [...prev, aiMsg]);
-    }, 700);
+
+      if (!isDemoMode && sessionId) {
+        await addDoc(collection(db, 'chats', sessionId, 'messages'), {
+          role: 'ai', text: aiResponseText, timestamp: serverTimestamp()
+        });
+      }
+    } catch (e) {
+      console.warn("AI Chat response error:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatTime = (date) => {
@@ -69,7 +70,7 @@ export default function AIChat({ sessionId, compact = false }) {
   };
 
   return (
-    <div className="chat-wrap" style={compact ? { height: 360 } : {}}>
+    <div className="chat-wrap" style={compact ? { height: 380 } : {}}>
       <div className="chat-messages">
         {messages.map(msg => (
           <div key={msg.id} className={`msg-row ${msg.role === 'user' ? 'user' : 'ai'}`}>
@@ -78,18 +79,28 @@ export default function AIChat({ sessionId, compact = false }) {
               {msg.role === 'ai' ? '🤖' : '👤'}
             </div>
             <div>
-              <div className="msg-bubble">{msg.text}</div>
+              <div className="msg-bubble" style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
               <div className="msg-time">{formatTime(msg.time)}</div>
             </div>
           </div>
         ))}
+        {loading && (
+          <div className="msg-row ai">
+            <div className="avatar avatar-sm" style={{ background: 'var(--primary)', color: '#fff' }}>🤖</div>
+            <div className="msg-bubble" style={{ color: 'var(--text2)', fontStyle: 'italic' }}>
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }}></i> Analyzing symptoms...
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
+
       <div className="quick-chips">
-        {['Chest pain', 'Headache', 'Fever', 'Back pain', 'Breathing difficulty'].map(q => (
-          <button key={q} className="quick-chip" onClick={() => sendMessage(q)}>{q}</button>
+        {['Chest pain & tightness', 'High fever & chills', 'Throbbing headache', 'Back pain', 'Shortness of breath'].map(q => (
+          <button key={q} className="quick-chip" onClick={() => sendMessage(q)} disabled={loading}>{q}</button>
         ))}
       </div>
+
       <div className="chat-input-row">
         <input
           className="chat-input"
@@ -97,8 +108,9 @@ export default function AIChat({ sessionId, compact = false }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage(input)}
           placeholder="Describe your symptom..."
+          disabled={loading}
         />
-        <button className="btn btn-primary btn-icon" onClick={() => sendMessage(input)}>
+        <button className="btn btn-primary btn-icon" onClick={() => sendMessage(input)} disabled={loading}>
           <i className="fa-solid fa-paper-plane"></i>
         </button>
       </div>

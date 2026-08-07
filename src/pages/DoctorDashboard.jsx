@@ -1,5 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { ToastContainer, showToast } from '../components/Toast';
+import VideoConsultationModal from '../components/VideoConsultationModal';
+import PrescriptionModal from '../components/PrescriptionModal';
 
 const PATIENTS = [
   { id: 'MT001', name: 'Rahul Sharma', age: 42, gender: 'M', condition: 'Hypertension', score: 91, scoreStatus: 'h', adherence: 95, status: 'Active', bg: '#1a73e8' },
@@ -9,11 +14,11 @@ const PATIENTS = [
   { id: 'MT005', name: 'Priya Deshpande', age: 29, gender: 'F', condition: 'Heart Failure', score: 94, scoreStatus: 'h', adherence: 97, status: 'Active', bg: '#00bfa5' },
 ];
 
-const APPOINTMENTS = [
+const INITIAL_APPOINTMENTS = [
   { time: '9:00 AM', patient: 'Ravi Kumar', type: 'Diabetes management · In-person', status: 'Done', color: 'var(--secondary)' },
-  { time: '10:30 AM', patient: 'Meena Patel', type: 'Wound healing review · Video', status: 'Next', color: 'var(--primary)' },
-  { time: '11:00 AM', patient: 'Sanjay Rao', type: 'Chest pain, ECG review · Video', status: 'Upcoming', color: 'var(--amber)' },
-  { time: '2:30 PM', patient: 'Priya Deshpande', type: 'Cardiac meds adjustment · Video', status: 'Upcoming', color: 'var(--teal)' },
+  { time: '10:30 AM', patient: 'Meena Patel', type: 'Wound healing review · Video', status: 'Next', color: 'var(--primary)', isVideo: true },
+  { time: '11:00 AM', patient: 'Sanjay Rao', type: 'Chest pain, ECG review · Video', status: 'Upcoming', color: 'var(--amber)', isVideo: true },
+  { time: '2:30 PM', patient: 'Priya Deshpande', type: 'Cardiac meds adjustment · Video', status: 'Upcoming', color: 'var(--teal)', isVideo: true },
   { time: '4:00 PM', patient: 'Emergency Slot', type: 'AI-prioritized emergency', status: 'Emergency', color: 'var(--red)' },
 ];
 
@@ -26,13 +31,45 @@ const SCRIBE_LINES = [
 ];
 
 export default function DoctorDashboard() {
+  const { isDemoMode } = useAuth();
   const [recording, setRecording] = useState(false);
   const [scribeIndex, setScribeIndex] = useState(0);
   const [scribeData, setScribeData] = useState([
-    { key: 'Patient', val: 'Sanjay Rao · 45M · #MT004' },
-    { key: 'Complaint', val: 'Chest pain · Shortness of breath · 3 days' },
-    { key: 'BP', val: '142/92 mmHg — Elevated' },
+    { key: 'Patient', val: 'Rahul Sharma · 42M · #MT001' },
+    { key: 'Complaint', val: 'Chest tightness · Exertional dyspnea · 3 days' },
+    { key: 'BP', val: '138/88 mmHg — Mildly Elevated' },
   ]);
+
+  const [appointments, setAppointments] = useState(INITIAL_APPOINTMENTS);
+  const [activeVideoCall, setActiveVideoCall] = useState(null);
+  const [activeRx, setActiveRx] = useState(null);
+
+  // Firestore appointment listener
+  useEffect(() => {
+    if (isDemoMode) return;
+    try {
+      const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
+      const unsub = onSnapshot(q, (snap) => {
+        const dbAppts = snap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            time: d.slotTime || '12:00 PM',
+            patient: d.patientName || 'Patient',
+            type: `${d.department || 'Cardiology'} · ${d.consultType || 'Video'}`,
+            status: 'Upcoming',
+            color: 'var(--primary)',
+            isVideo: d.consultType?.toLowerCase().includes('video')
+          };
+        });
+        if (dbAppts.length > 0) {
+          setAppointments(prev => [...dbAppts, ...prev]);
+        }
+      });
+      return unsub;
+    } catch (e) {
+      console.warn("Firestore appointments listener notice:", e);
+    }
+  }, [isDemoMode]);
 
   const toggleRecording = () => {
     if (recording) {
@@ -41,7 +78,6 @@ export default function DoctorDashboard() {
     } else {
       setRecording(true);
       showToast('AI Medical Scribe listening...', 'success');
-      // Simulate live transcription
       let idx = scribeIndex;
       const interval = setInterval(() => {
         if (idx < SCRIBE_LINES.length) {
@@ -53,25 +89,73 @@ export default function DoctorDashboard() {
           clearInterval(interval);
           setRecording(false);
           showToast('Voice Consultation complete! Prescription generated.', 'success');
+          setActiveRx({
+            patientName: 'Rahul Sharma',
+            diagnosis: 'Hypertensive Heart Disease',
+            icdCode: 'ICD-10 I11.9',
+            medications: [
+              { name: 'Atorvastatin', dosage: '20mg', frequency: '0-0-1 (Night)', duration: '30 Days', instructions: 'After dinner' },
+              { name: 'Amlodipine', dosage: '5mg', frequency: '1-0-0 (Morning)', duration: '30 Days', instructions: 'After breakfast' }
+            ]
+          });
         }
-      }, 2000);
+      }, 1800);
     }
+  };
+
+  const handleVideoGeneratedRx = (parsedScribe) => {
+    setActiveRx({
+      patientName: activeVideoCall?.patient || 'Rahul Sharma',
+      diagnosis: parsedScribe.diagnosis || 'Hypertensive Heart Disease with Tachycardia',
+      icdCode: parsedScribe.icdCode || 'ICD-10 I11.9',
+      medications: parsedScribe.medications || [
+        { name: 'Atorvastatin', dosage: '20mg', frequency: '0-0-1 (Night)', duration: '30 Days', instructions: 'After food' },
+        { name: 'Amlodipine', dosage: '5mg', frequency: '1-0-0 (Morning)', duration: '30 Days', instructions: 'After food' }
+      ],
+      advice: parsedScribe.advice,
+      vitals: parsedScribe.vitalStatus
+    });
+    showToast('Digital Prescription generated from Video AI Scribe!', 'success');
   };
 
   return (
     <div className="page" style={{ background: 'var(--bg)' }}>
       <ToastContainer />
+
+      {/* Video Consultation Modal */}
+      {activeVideoCall && (
+        <VideoConsultationModal
+          patientName={activeVideoCall.patient}
+          doctorName="Dr. Arjun Mehta"
+          onClose={() => setActiveVideoCall(null)}
+          onGenerateRx={handleVideoGeneratedRx}
+        />
+      )}
+
+      {/* Prescription View / Print Modal */}
+      {activeRx && (
+        <PrescriptionModal
+          rx={activeRx}
+          onClose={() => setActiveRx(null)}
+        />
+      )}
+
       <div className="content-grid">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <div style={{ fontSize: '.84rem', color: 'var(--text2)' }}>Welcome back,</div>
             <h1 style={{ fontSize: '1.8rem', margin: 0 }}>Dr. Arjun Mehta 👨‍⚕️</h1>
-            <div style={{ fontSize: '.84rem', color: 'var(--text2)', marginTop: 4 }}>Cardiologist · Apollo Hospital · 8 Appointments Today</div>
+            <div style={{ fontSize: '.84rem', color: 'var(--text2)', marginTop: 4 }}>Cardiologist · Apollo Hospital · {appointments.length} Appointments Today</div>
           </div>
-          <button className="btn btn-primary" onClick={toggleRecording}>
-            <i className={`fa-solid ${recording ? 'fa-stop pulse' : 'fa-microphone'}`}></i>
-            {recording ? 'Stop Recording' : 'Start AI Voice Consult'}
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-outline" onClick={() => setActiveRx({ patientName: 'Rahul Sharma' })}>
+              <i className="fa-solid fa-file-prescription"></i> Create / Print Rx
+            </button>
+            <button className="btn btn-primary" onClick={toggleRecording}>
+              <i className={`fa-solid ${recording ? 'fa-stop pulse' : 'fa-microphone'}`}></i>
+              {recording ? 'Stop Recording' : 'Start AI Voice Consult'}
+            </button>
+          </div>
         </div>
 
         <div className="dash-grid">
@@ -165,7 +249,7 @@ export default function DoctorDashboard() {
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--borderl)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: '.9rem' }}>👥 Active Patients</span>
-                <button className="btn btn-outline btn-sm">+ Add Patient</button>
+                <button className="btn btn-outline btn-sm" onClick={() => showToast('Patient MT006 added to workspace.', 'info')}>+ Add Patient</button>
               </div>
               <table className="data-table">
                 <thead>
@@ -174,7 +258,7 @@ export default function DoctorDashboard() {
                     <th>Condition</th>
                     <th>Recovery Score</th>
                     <th>Adherence</th>
-                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -204,7 +288,14 @@ export default function DoctorDashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className={`badge badge-${p.status === 'Active' ? 'green' : p.status === 'Urgent' ? 'red' : 'amber'}`}>{p.status}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm btn-outline" onClick={() => setActiveVideoCall({ patient: p.name })}>
+                            <i className="fa-solid fa-video"></i> Video
+                          </button>
+                          <button className="btn btn-sm btn-outline" onClick={() => setActiveRx({ patientName: p.name, patientId: p.id, patientAge: p.age, patientGender: p.gender === 'M' ? 'Male' : 'Female' })}>
+                            <i className="fa-solid fa-file-prescription"></i> Rx
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -216,7 +307,7 @@ export default function DoctorDashboard() {
             <div className="card">
               <div style={{ fontWeight: 700, marginBottom: 14 }}>📅 Today's Consultation Schedule</div>
               <div className="timeline">
-                {APPOINTMENTS.map((a, i) => (
+                {appointments.map((a, i) => (
                   <div key={i} className="timeline-item">
                     <span className="t-time">{a.time}</span>
                     <div className="t-dot" style={{ background: a.color }}></div>
@@ -224,7 +315,12 @@ export default function DoctorDashboard() {
                       <div className="t-patient">{a.patient}</div>
                       <div className="t-type">{a.type}</div>
                     </div>
-                    <span className="badge badge-blue" style={{ background: 'transparent', borderColor: a.color, color: a.color }}>{a.status}</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className="badge badge-blue" style={{ background: 'transparent', borderColor: a.color, color: a.color }}>{a.status}</span>
+                      <button className="btn btn-sm btn-primary" onClick={() => setActiveVideoCall({ patient: a.patient })}>
+                        <i className="fa-solid fa-video"></i> Join
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

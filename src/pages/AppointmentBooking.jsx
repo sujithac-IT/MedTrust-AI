@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { ToastContainer, showToast } from '../components/Toast';
 
 export default function AppointmentBooking() {
-  const [doctor, setDoctor] = useState('Dr. Priya Nair');
-  const [specialty, setSpecialty] = useState('Cardiologist');
+  const { currentUser, userProfile, isDemoMode } = useAuth();
+  const profile = userProfile || currentUser || {};
+  const [doctor] = useState('Dr. Arjun Mehta');
+  const [specialty] = useState('Cardiologist');
   const [selectedSlot, setSelectedSlot] = useState('11:00 AM');
   const [consultType, setConsultType] = useState('video');
+  const [booking, setBooking] = useState(false);
   const navigate = useNavigate();
 
   const slots = [
@@ -20,9 +26,30 @@ export default function AppointmentBooking() {
     { time: '3:00 PM', status: 'avail' },
   ];
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
+    setBooking(true);
+    if (!isDemoMode) {
+      try {
+        await addDoc(collection(db, 'appointments'), {
+          patientName: profile.displayName || 'Rahul Sharma',
+          patientId: currentUser?.uid || 'MT001',
+          doctorName: doctor,
+          department: specialty,
+          slotTime: selectedSlot,
+          consultType: consultType === 'video' ? 'Video Consult' : 'Hospital Visit',
+          createdAt: serverTimestamp(),
+          status: 'Upcoming'
+        });
+      } catch (err) {
+        console.warn("Firestore appointment write notice:", err);
+      }
+    }
+
     showToast(`✅ Appointment confirmed with ${doctor} for ${selectedSlot}!`, 'success');
-    setTimeout(() => navigate('/patient'), 1500);
+    setTimeout(() => {
+      setBooking(false);
+      navigate('/patient');
+    }, 1500);
   };
 
   return (
@@ -36,11 +63,11 @@ export default function AppointmentBooking() {
 
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ width: 56, height: 56, background: 'var(--primary-light)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>👩‍⚕️</div>
+            <div style={{ width: 56, height: 56, background: 'var(--primary-light)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>👨‍⚕️</div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{doctor}</div>
-              <div style={{ fontSize: '.84rem', color: 'var(--primary)', fontWeight: 600 }}>{specialty} · MBBS, MD</div>
-              <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: 2 }}>⭐ 4.9 (342 reviews) · Apollo Hospital</div>
+              <div style={{ fontSize: '.84rem', color: 'var(--primary)', fontWeight: 600 }}>{specialty} · MBBS, MD, DM</div>
+              <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: 2 }}>⭐ 4.9 (482 reviews) · Apollo Hospital</div>
             </div>
           </div>
         </div>
@@ -60,7 +87,7 @@ export default function AppointmentBooking() {
 
         {/* Slot Picker */}
         <div className="card" style={{ marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: '.88rem', marginBottom: 12 }}>Select Available Slot — Aug 10, 2026</div>
+          <div style={{ fontWeight: 700, fontSize: '.88rem', marginBottom: 12 }}>Select Available Slot — Today</div>
           <div className="slot-grid">
             {slots.map(s => (
               <div key={s.time}
@@ -76,15 +103,15 @@ export default function AppointmentBooking() {
         <div className="card" style={{ marginBottom: 24, background: 'var(--primary-light)', border: '1px solid rgba(26,115,232,.2)' }}>
           <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--primary)', marginBottom: 10 }}>🤖 AI Queue Intelligence</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: '.84rem' }}>
-            <div>Queue Position: <strong>#3</strong></div>
-            <div>Estimated Wait: <strong>~8 minutes</strong></div>
+            <div>Queue Position: <strong>#2</strong></div>
+            <div>Estimated Wait: <strong>~5 minutes</strong></div>
             <div>Consultation Starts: <strong>{selectedSlot}</strong></div>
             <div>Queue Status: <strong style={{ color: 'var(--secondary)' }}>On Time</strong></div>
           </div>
         </div>
 
-        <button className="btn btn-primary btn-lg w-full" onClick={handleBooking} style={{ justifyContent: 'center' }}>
-          <i className="fa-solid fa-check"></i> Confirm Appointment for {selectedSlot}
+        <button className="btn btn-primary btn-lg w-full" onClick={handleBooking} disabled={booking} style={{ justifyContent: 'center' }}>
+          <i className="fa-solid fa-check"></i> {booking ? 'Confirming...' : `Confirm Appointment for ${selectedSlot}`}
         </button>
       </div>
     </div>
