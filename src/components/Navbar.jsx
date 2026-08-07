@@ -30,12 +30,12 @@ export default function Navbar({ onOpenSos }) {
         
         {/* Brand Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
-          <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))', width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800 }}>
-            🏥
+          <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))', width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#fff', fontWeight: 800 }}>
+            <i className="fa-solid fa-hospital-user"></i>
           </div>
           <div>
-            <span style={{ fontWeight: 900, fontSize: '1.2rem', letterSpacing: '-0.5px', color: '#fff' }}>MediTrust <span style={{ color: '#5dade2' }}>AI</span></span>
-            <div style={{ fontSize: '.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Agentic Hospital OS</div>
+            <span style={{ fontWeight: 900, fontSize: '1.15rem', letterSpacing: '-0.5px', color: '#fff' }}>MediTrust <span style={{ color: '#5dade2' }}>AI</span></span>
+            <div style={{ fontSize: '.64rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Agentic Hospital OS</div>
           </div>
         </Link>
 
@@ -65,9 +65,9 @@ export default function Navbar({ onOpenSos }) {
           <button
             onClick={onOpenSos}
             className="btn btn-danger pulse"
-            style={{ background: '#ef4444', border: 'none', color: '#fff', fontWeight: 800, padding: '8px 16px', borderRadius: 20, boxShadow: '0 0 16px rgba(239,68,68,.6)', fontSize: '.82rem' }}
+            style={{ background: '#dc2626', border: 'none', color: '#fff', fontWeight: 800, padding: '8px 16px', borderRadius: 20, boxShadow: '0 0 16px rgba(220,38,38,.5)', fontSize: '.8rem' }}
           >
-            🚨 108 SOS
+            <i className="fa-solid fa-truck-medical" style={{ marginRight: 6 }}></i> 108 SOS
           </button>
 
           {currentUser ? (
@@ -88,27 +88,28 @@ export default function Navbar({ onOpenSos }) {
                 <div style={{ position: 'absolute', right: 0, top: '120%', background: '#1e293b', border: '1px solid #334155', borderRadius: 12, width: 220, padding: 8, boxShadow: '0 10px 30px rgba(0,0,0,.5)', zIndex: 1001 }}>
                   <div style={{ fontSize: '.7rem', color: '#94a3b8', padding: '6px 10px', textTransform: 'uppercase', fontWeight: 700 }}>Switch Role Demo</div>
                   {[
-                    { id: 'patient', label: '👤 Patient Hub', path: '/patient' },
-                    { id: 'doctor', label: '👨‍⚕️ Doctor Portal', path: '/doctor' },
-                    { id: 'nurse', label: '🩺 Nurse Station', path: '/nurse' },
-                    { id: 'pharmacist', label: '💊 Pharmacist Desk', path: '/pharmacist' },
-                    { id: 'admin', label: '🏥 Command Center', path: '/command' },
-                    { id: 'family', label: '👨‍👩‍👧 Family Portal', path: '/family' },
+                    { id: 'patient', label: 'Patient Hub', icon: 'fa-user-injured', path: '/patient' },
+                    { id: 'doctor', label: 'Doctor Portal', icon: 'fa-user-doctor', path: '/doctor' },
+                    { id: 'nurse', label: 'Nurse Station', icon: 'fa-user-nurse', path: '/nurse' },
+                    { id: 'pharmacist', label: 'Pharmacist Desk', icon: 'fa-capsules', path: '/pharmacist' },
+                    { id: 'admin', label: 'Command Center', icon: 'fa-chart-line', path: '/command' },
+                    { id: 'family', label: 'Family Portal', icon: 'fa-people-roof', path: '/family' },
                   ].map(r => (
                     <button
                       key={r.id}
                       onClick={() => handleRoleSwitch(r.id)}
-                      style={{ width: '100%', textTransform: 'none', justifyContent: 'flex-start', background: currentRole === r.id ? '#334155' : 'transparent', border: 'none', color: '#fff', padding: '8px 10px', borderRadius: 8, fontSize: '.8rem', cursor: 'pointer', textAlign: 'left', display: 'block', marginBottom: 2 }}
+                      style={{ width: '100%', textTransform: 'none', justifyContent: 'flex-start', background: currentRole === r.id ? '#334155' : 'transparent', border: 'none', color: '#fff', padding: '8px 10px', borderRadius: 8, fontSize: '.8rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}
                     >
+                      <i className={`fa-solid ${r.icon}`} style={{ width: 16, textAlign: 'center', color: '#5dade2' }}></i>
                       {r.label}
                     </button>
                   ))}
                   <div style={{ borderTop: '1px solid #334155', marginTop: 6, paddingTop: 6 }}>
                     <button
                       onClick={() => { setRoleMenuOpen(false); logout(); navigate('/login'); }}
-                      style={{ width: '100%', background: 'none', border: 'none', color: '#ef4444', padding: '6px 10px', borderRadius: 6, fontSize: '.8rem', cursor: 'pointer', textAlign: 'left' }}
+                      style={{ width: '100%', background: 'none', border: 'none', color: '#ef4444', padding: '6px 10px', borderRadius: 6, fontSize: '.8rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
                     >
-                      Sign Out
+                      <i className="fa-solid fa-right-from-bracket" style={{ width: 16, textAlign: 'center' }}></i> Sign Out
                     </button>
                   </div>
                 </div>
