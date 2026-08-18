@@ -8,7 +8,7 @@
 
 ## 🔗 Quick Links & Live Application
 
-* **Local Web Application URL**: med-trust-ai.vercel.app
+* **Local Web Application URL**: 'https://med-trust-ai.vercel.app/'
 
 ---
 ##  Key Innovations & Core Features
