@@ -307,6 +307,77 @@ input, select, textarea { font-family: 'Inter', sans-serif; }
 .quick-chip { background: #fff; border: 1px solid var(--border); border-radius: var(--rf); padding: 5px 12px; font-size: .75rem; font-weight: 500; color: var(--primary); cursor: pointer; transition: var(--tr); }
 .quick-chip:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+/* ── Consultation Scribe & Case Sheet ── */
+.consult-scribe-modal { background: #0d1117; color: #e2e8f0; }
+.scribe-transcript { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; padding: 14px 18px; }
+.scribe-transcript-line { display: flex; gap: 10px; align-items: flex-start; }
+.scribe-line-bubble { border-radius: 4px 12px 12px 12px; padding: 8px 12px; font-size: .83rem; line-height: 1.5; }
+
+/* ── Waveform Animation ── */
+@keyframes waveform-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 28px; }
+}
+.waveform-bar-animated {
+  animation: waveform-bar 0.8s ease-in-out infinite;
+}
+
+/* ── Triage Cards ── */
+.triage-dept-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 16px 18px; transition: box-shadow 0.2s, transform 0.2s; }
+.triage-dept-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
+.triage-confidence-ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+
+/* ── Confidence bar animation ── */
+@keyframes fillBar {
+  from { width: 0%; }
+  to { width: var(--target-width); }
+}
+.confidence-bar { height: 6px; border-radius: 6px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── fadeIn for analyzing steps ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Case Sheet Print Styles ── */
+@media print {
+  .no-print, .navbar, .wa-float, .btn, button, .modal-backdrop > *:not(.printable-rx) {
+    display: none !important;
+  }
+  .printable-rx {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body { background: #fff !important; }
+  .modal-backdrop {
+    position: static !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+  }
+  .modal-content {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+  }
+}
+
+/* ── Language Picker ── */
+.lang-picker { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: .75rem; color: var(--text); cursor: pointer; font-family: 'Inter', sans-serif; }
+.lang-picker:focus { outline: none; border-color: var(--primary); }
+
+/* ── Speak / TTS indicator ── */
+.tts-speaking { animation: pulse 1.2s ease-in-out infinite; }
+
+/* ── HMS Record badge ── */
+.hms-record-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg); transition: var(--tr); }
+.hms-record-card:hover { border-color: var(--primary); box-shadow: var(--s1); }
+
+/* ── Scribe field fade-in ── */
+.scribe-field { animation: fadeIn 0.4s ease both; }
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .dash-grid { grid-template-columns: 1fr; }
