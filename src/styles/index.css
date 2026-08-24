@@ -378,6 +378,204 @@ input, select, textarea { font-family: 'Inter', sans-serif; }
 /* ── Scribe field fade-in ── */
 .scribe-field { animation: fadeIn 0.4s ease both; }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   PROFESSIONAL CASE SHEET MODAL  (cs-* classes)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Container */
+.cs-modal {
+  max-width: 920px; width: 96vw; padding: 0;
+  overflow: hidden; border-radius: 18px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.45);
+}
+
+/* ── Header ── */
+.cs-header {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #fff; padding: 16px 22px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.cs-header-left { display: flex; align-items: center; gap: 13px; }
+.cs-header-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; }
+.cs-header-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.05rem; }
+.cs-header-sub { font-size: .72rem; opacity: .78; margin-top: 2px; }
+.cs-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cs-urgency-pill { font-size: .7rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: .4px; }
+.cs-source-badge { font-size: .7rem; font-weight: 600; padding: 4px 10px; border-radius: 10px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); color: #fff; }
+.cs-source-video { background: rgba(124,58,237,.25); border-color: rgba(124,58,237,.4); }
+.cs-close-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .9rem; transition: background 0.2s; }
+.cs-close-btn:hover { background: rgba(255,255,255,0.22); }
+
+/* ── Tab bar ── */
+.cs-tab-bar { background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; flex-shrink: 0; }
+.cs-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #64748b; font-weight: 600; font-size: .83rem; padding: 11px 20px; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.cs-tab:hover:not(.cs-tab--disabled) { color: #1a73e8; background: rgba(26,115,232,.04); }
+.cs-tab--active { background: #fff !important; border-bottom-color: #1a73e8 !important; color: #1a73e8 !important; }
+.cs-tab--disabled { opacity: .38; cursor: not-allowed; }
+
+/* ── Body (scrollable) ── */
+.cs-body { overflow-y: auto; max-height: 64vh; background: #fff; }
+.cs-body > div { padding: 28px 30px; font-family: 'Inter', sans-serif; color: #1f2937; }
+
+/* ── Hospital letterhead ── */
+.cs-letterhead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a73e8; padding-bottom: 18px; margin-bottom: 22px; gap: 16px; flex-wrap: wrap; }
+.cs-letterhead-left { display: flex; align-items: center; gap: 12px; }
+.cs-hosp-logo { width: 46px; height: 46px; background: #1a73e8; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.cs-hosp-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.28rem; font-weight: 800; color: #1a73e8; letter-spacing: -.4px; line-height: 1.2; }
+.cs-hosp-sub { font-size: .68rem; color: #6b7280; margin-top: 3px; }
+.cs-letterhead-right { text-align: right; }
+.cs-doc-name { font-weight: 700; font-size: .92rem; color: #111827; }
+.cs-doc-cred { font-size: .73rem; color: #4b5563; margin-top: 2px; }
+.cs-doc-reg { font-size: .68rem; color: #6b7280; margin-top: 1px; }
+.cs-doc-date { font-size: .72rem; color: #1a73e8; font-weight: 600; margin-top: 4px; }
+
+/* ── Patient strip ── */
+.cs-patient-strip { background: #f1f5f9; border-radius: 10px; padding: 13px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-bottom: 18px; border: 1px solid #e2e8f0; }
+.cs-patient-cell { display: flex; flex-direction: column; gap: 3px; }
+.cs-patient-label { font-size: .63rem; font-weight: 700; color: #6b7280; letter-spacing: .5px; text-transform: uppercase; }
+.cs-patient-val { font-size: .84rem; font-weight: 700; color: #111827; }
+
+/* ── Urgency stripe ── */
+.cs-urgency-stripe { border-left: 4px solid; border-radius: 0 8px 8px 0; padding: 10px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-top: 1px solid transparent; border-right: 1px solid transparent; border-bottom: 1px solid transparent; }
+.cs-urgency-text { font-size: .82rem; }
+.cs-posted-badge { font-size: .72rem; color: #059669; font-weight: 600; display: flex; align-items: center; gap: 5px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 8px; }
+
+/* ── Section label ── */
+.cs-section { margin-bottom: 20px; }
+.cs-section-label { font-size: .65rem; font-weight: 700; color: #6b7280; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 10px; }
+
+/* ── Vitals grid ── */
+.cs-vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; }
+.cs-vital-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 8px; text-align: center; }
+.cs-vital-icon { font-size: 1.2rem; margin-bottom: 5px; }
+.cs-vital-val { font-weight: 700; font-size: .84rem; color: #1e40af; line-height: 1.2; }
+.cs-vital-label { font-size: .62rem; color: #6b7280; margin-top: 3px; }
+
+/* ── SOAP grid ── */
+.cs-soap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.cs-soap-card { border-radius: 10px; padding: 14px 16px; }
+.cs-soap-s { background: #f5f3ff; border: 1px solid #ddd6fe; }
+.cs-soap-o { background: #f0f9ff; border: 1px solid #bae6fd; }
+.cs-soap-badge { display: inline-flex; align-items: center; font-size: .65rem; font-weight: 700; letter-spacing: .4px; padding: 3px 10px; border-radius: 6px; margin-bottom: 8px; text-transform: uppercase; }
+.cs-soap-badge-s { background: #ede9fe; color: #6d28d9; }
+.cs-soap-badge-o { background: #e0f2fe; color: #0369a1; }
+.cs-soap-badge-a { background: #fef3c7; color: #92400e; }
+.cs-soap-badge-p { background: #d1fae5; color: #065f46; }
+.cs-soap-heading { font-size: .72rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+.cs-soap-body { font-size: .82rem; color: #374151; line-height: 1.65; }
+
+/* ── Text block ── */
+.cs-text-block { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; font-size: .82rem; color: #4b5563; line-height: 1.65; }
+
+/* ── Diagnosis ── */
+.cs-diagnosis-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.cs-diagnosis-text { font-size: 1rem; font-weight: 700; color: #111827; }
+.cs-icd-badge { background: #e0e7ff; color: #3730a3; font-size: .72rem; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+.cs-differentials { font-size: .78rem; color: #6b7280; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cs-diff-label { font-weight: 600; }
+.cs-diff-tag { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 10px; padding: 2px 9px; }
+
+/* ── Medications table ── */
+.cs-rx-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cs-rx-symbol { font-family: 'Georgia', serif; font-size: 1.7rem; font-weight: 900; color: #1a73e8; line-height: 1; }
+.cs-meds-table { width: 100%; border-collapse: collapse; font-size: .81rem; }
+.cs-meds-table thead tr { background: #f1f5f9; border-bottom: 2px solid #e2e8f0; text-align: left; }
+.cs-meds-table th { padding: 9px 12px; font-size: .67rem; font-weight: 700; color: #374151; letter-spacing: .4px; text-transform: uppercase; }
+.cs-meds-table td { padding: 11px 12px; vertical-align: middle; }
+.cs-row-even { background: #fff; border-bottom: 1px solid #f1f5f9; }
+.cs-row-odd  { background: #fafbfc; border-bottom: 1px solid #f1f5f9; }
+.cs-td-num { width: 32px; color: #9ca3af; font-weight: 600; text-align: center; }
+.cs-td-med { min-width: 160px; }
+.cs-med-name { font-weight: 700; color: #111827; display: block; }
+.cs-med-dose { font-size: .73rem; color: #6b7280; }
+.cs-td-instr { color: #059669; font-weight: 500; }
+
+/* ── Investigations ── */
+.cs-inv-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-inv-tag { background: #fefce8; border: 1px solid #fde047; border-radius: 20px; padding: 5px 13px; font-size: .77rem; color: #92400e; font-weight: 500; }
+
+/* ── Advice & follow-up ── */
+.cs-advice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.cs-advice-card { border-radius: 10px; padding: 14px 16px; }
+.cs-advice-yellow { background: #fffbeb; border: 1px solid #fde68a; }
+.cs-advice-green  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.cs-advice-heading { font-weight: 700; font-size: .78rem; margin-bottom: 6px; }
+.cs-advice-yellow .cs-advice-heading { color: #92400e; }
+.cs-advice-green  .cs-advice-heading { color: #166534; }
+.cs-advice-body { font-size: .81rem; line-height: 1.65; }
+.cs-advice-yellow .cs-advice-body { color: #78350f; }
+.cs-advice-green  .cs-advice-body { color: #14532d; }
+
+/* ── Referrals + notes ── */
+.cs-referrals, .cs-doctor-notes { font-size: .81rem; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; line-height: 1.6; }
+.cs-referrals { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+.cs-ref-label, .cs-notes-label { font-weight: 700; margin-right: 4px; }
+.cs-ref-val { color: #1e3a8a; }
+.cs-doctor-notes { background: #f8f9fa; border: 1px solid #e5e7eb; }
+.cs-notes-label { color: #374151; }
+.cs-notes-val { color: #4b5563; }
+
+/* ── Footer ── */
+.cs-footer { border-top: 1px solid #e5e7eb; padding-top: 18px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.cs-footer-left { display: flex; align-items: center; gap: 12px; }
+.cs-qr-block { width: 52px; height: 52px; background: #111827; color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .52rem; text-align: center; font-family: monospace; line-height: 1.3; padding: 4px; flex-shrink: 0; }
+.cs-hash-text { font-size: .67rem; color: #9ca3af; line-height: 1.6; }
+.cs-hash-code { font-family: monospace; color: #6b7280; }
+.cs-footer-right { text-align: right; }
+.cs-sig-name { font-family: 'Brush Script MT', cursive; font-size: 1.55rem; color: #1a73e8; }
+.cs-sig-line { font-size: .67rem; color: #6b7280; border-top: 1px dashed #d1d5db; padding-top: 4px; margin-top: 2px; }
+
+/* ── Transcript tab ── */
+.cs-transcript-body { overflow-y: auto; max-height: 64vh; padding: 20px 22px; background: #0d1117; display: flex; flex-direction: column; gap: 12px; }
+.cs-tline { display: flex; gap: 10px; align-items: flex-start; }
+.cs-tline-avatar { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0; margin-top: 2px; }
+.cs-tline-doc { background: rgba(26,115,232,.15); border: 1px solid rgba(26,115,232,.25); }
+.cs-tline-pat { background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.2); }
+.cs-tline-bubble { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-left: 3px solid; border-radius: 4px 10px 10px 10px; padding: 9px 13px; }
+.cs-tline-speaker { font-size: .68rem; font-weight: 700; margin-bottom: 4px; }
+.cs-tline-text { font-size: .81rem; color: #e2e8f0; line-height: 1.55; }
+.cs-empty { color: #64748b; font-size: .84rem; text-align: center; padding: 40px 0; }
+
+/* ── Video Summary tab ── */
+.cs-video-summary-body { overflow-y: auto; max-height: 64vh; padding: 22px 26px; background: #fff; }
+.cs-vs-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e5e7eb; }
+.cs-vs-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg,#7c3aed,#4c1d95); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+.cs-vs-title { font-family: 'Plus Jakarta Sans',sans-serif; font-weight: 800; font-size: 1rem; color: #111827; }
+.cs-vs-sub { font-size: .75rem; color: #6b7280; margin-top: 3px; }
+.cs-vs-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
+.cs-vs-stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 12px; text-align: center; }
+.cs-vs-stat-val { font-weight: 800; font-size: 1.1rem; color: #1a73e8; }
+.cs-vs-stat-label { font-size: .68rem; color: #6b7280; margin-top: 4px; }
+.cs-vs-sections { display: flex; flex-direction: column; gap: 14px; }
+.cs-vs-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+.cs-vs-section-title { font-weight: 700; font-size: .82rem; color: #374151; margin-bottom: 6px; }
+.cs-vs-section-body { font-size: .81rem; color: #4b5563; line-height: 1.65; }
+
+/* ── Action bar ── */
+.cs-action-bar { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 13px 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
+.cs-action-info { font-size: .78rem; color: #64748b; display: flex; align-items: center; gap: 7px; }
+.cs-action-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.cs-btn-speak { background: transparent; border: 1px solid #7c3aed; color: #7c3aed; border-radius: 8px; padding: 8px 14px; font-size: .78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+.cs-btn-speak--active { background: #7c3aed; color: #fff; }
+.cs-btn-speak:hover { background: #7c3aed; color: #fff; }
+.cs-btn-print { background: transparent; border: 1px solid #d1d5db; color: #374151; border-radius: 8px; padding: 8px 14px; font-size: .78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+.cs-btn-print:hover { border-color: #6b7280; background: #f9fafb; }
+.cs-btn-post { background: linear-gradient(135deg,#10b981,#059669); border: none; color: #fff; border-radius: 8px; padding: 8px 18px; font-size: .82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif; transition: opacity 0.2s; }
+.cs-btn-post:disabled { opacity: .6; cursor: not-allowed; }
+.cs-btn-post:hover:not(:disabled) { opacity: .9; }
+.cs-posted-confirm { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 14px; font-size: .78rem; color: #166534; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+/* ── Responsive for case sheet ── */
+@media (max-width: 640px) {
+  .cs-soap-grid, .cs-advice-grid { grid-template-columns: 1fr; }
+  .cs-vs-stats { grid-template-columns: repeat(2,1fr); }
+  .cs-patient-strip { grid-template-columns: 1fr 1fr; }
+  .cs-body > div { padding: 18px 16px; }
+  .cs-action-bar { flex-direction: column; align-items: stretch; }
+  .cs-action-buttons { justify-content: flex-end; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .dash-grid { grid-template-columns: 1fr; }
