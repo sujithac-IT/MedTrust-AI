@@ -4,8 +4,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
   updateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -22,55 +20,26 @@ export function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Demo user catalog supporting all 6 healthcare roles
+  // Only Doctor and Patient roles for this prototype
   const demoUsers = {
-    'patient@demo.com': {
-      uid: 'demo-patient-001',
-      email: 'patient@demo.com',
-      displayName: 'Rahul Sharma',
-      role: 'patient',
-      phone: '+91 98765 43210',
-      condition: 'Hypertension',
-      recoveryScore: 91,
-    },
     'doctor@demo.com': {
       uid: 'demo-doctor-001',
       email: 'doctor@demo.com',
       displayName: 'Dr. Arjun Mehta',
       role: 'doctor',
-      specialty: 'Cardiologist',
-      hospital: 'Apollo Hospital',
+      specialty: 'General Medicine',
+      hospital: 'MediTrust AI Health Institute',
+      licenseNo: 'MCI-2024-4821',
     },
-    'nurse@demo.com': {
-      uid: 'demo-nurse-001',
-      email: 'nurse@demo.com',
-      displayName: 'Sister Anitha',
-      role: 'nurse',
-      ward: 'Ward Station 4B',
-      hospital: 'Apollo Hospital',
-    },
-    'pharmacist@demo.com': {
-      uid: 'demo-pharmacist-001',
-      email: 'pharmacist@demo.com',
-      displayName: 'Rajesh Kannan',
-      role: 'pharmacist',
-      license: 'PH-2024-912',
-      hospital: 'Apollo Hospital',
-    },
-    'admin@demo.com': {
-      uid: 'demo-admin-001',
-      email: 'admin@demo.com',
-      displayName: 'Command Admin',
-      role: 'admin',
-      hospital: 'Apollo Hospital Command Center',
-    },
-    'family@demo.com': {
-      uid: 'demo-family-001',
-      email: 'family@demo.com',
-      displayName: 'Priya Sharma',
-      role: 'family',
-      relation: 'Spouse',
-      patientId: 'demo-patient-001',
+    'patient@demo.com': {
+      uid: 'demo-patient-001',
+      email: 'patient@demo.com',
+      displayName: 'Rahul Sharma',
+      role: 'patient',
+      age: 42,
+      gender: 'Male',
+      phone: '+91 98765 43210',
+      preferredLanguage: 'English',
     },
   };
 
@@ -97,7 +66,7 @@ export function AuthProvider({ children }) {
         uid: 'custom-demo-' + Date.now(),
         email,
         displayName: email.split('@')[0],
-        role: email.includes('doctor') ? 'doctor' : email.includes('nurse') ? 'nurse' : email.includes('pharmacist') ? 'pharmacist' : email.includes('family') ? 'family' : email.includes('admin') ? 'admin' : 'patient'
+        role: email.includes('doctor') ? 'doctor' : 'patient'
       };
       setCurrentUser(demo);
       setUserProfile(demo);
@@ -106,45 +75,12 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function switchDemoRole(roleKey) {
-    const roleMap = {
-      patient: 'patient@demo.com',
-      doctor: 'doctor@demo.com',
-      nurse: 'nurse@demo.com',
-      pharmacist: 'pharmacist@demo.com',
-      admin: 'admin@demo.com',
-      family: 'family@demo.com',
-    };
-    const email = roleMap[roleKey] || 'patient@demo.com';
+  async function switchRole(roleKey) {
+    const email = roleKey === 'doctor' ? 'doctor@demo.com' : 'patient@demo.com';
     const demo = demoUsers[email];
     setCurrentUser(demo);
     setUserProfile(demo);
     return demo;
-  }
-
-  async function loginWithGoogle() {
-    if (isDemoMode) {
-      const demo = demoUsers['patient@demo.com'];
-      setCurrentUser(demo);
-      setUserProfile(demo);
-      return demo;
-    }
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-    if (!userDoc.exists()) {
-      await setDoc(doc(db, 'users', result.user.uid), {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        role: 'patient',
-        createdAt: serverTimestamp()
-      });
-      setUserProfile({ role: 'patient' });
-    } else {
-      setUserProfile(userDoc.data());
-    }
-    return result;
   }
 
   async function logout() {
@@ -185,8 +121,7 @@ export function AuthProvider({ children }) {
     isDemoMode,
     signup,
     login,
-    switchDemoRole,
-    loginWithGoogle,
+    switchRole,
     logout
   };
 

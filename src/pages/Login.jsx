@@ -1,248 +1,179 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ToastContainer, showToast } from '../components/Toast';
 
 export default function Login() {
-  const [searchParams] = useSearchParams();
-  const isSignUpInitial = searchParams.get('signup') === '1';
-
-  const [isSignUp, setIsSignUp] = useState(isSignUpInitial);
-  const [role, setRole] = useState(searchParams.get('role') || 'patient');
-  const [loginMethod, setLoginMethod] = useState('email'); // 'email' | 'otp' | 'face'
-  
+  const { login, signup } = useAuth();
+  const navigate = useNavigate();
+  const [isSignup, setIsSignup] = useState(false);
+  const [role, setRole] = useState('doctor');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [faceScanning, setFaceScanning] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, signup, loginWithGoogle, switchDemoRole } = useAuth();
-  const navigate = useNavigate();
-
-  const handleRedirect = (userRole) => {
-    const roleRoutes = {
-      doctor: '/doctor',
-      nurse: '/nurse',
-      pharmacist: '/pharmacist',
-      admin: '/command',
-      family: '/family',
-      patient: '/patient'
-    };
-    navigate(roleRoutes[userRole] || '/patient');
+  const handleDemoLogin = async (demoRole) => {
+    setLoading(true);
+    setError('');
+    try {
+      const demoEmail = demoRole === 'doctor' ? 'doctor@demo.com' : 'patient@demo.com';
+      await login(demoEmail, 'demo123');
+      navigate(demoRole === 'doctor' ? '/doctor' : '/patient');
+    } catch (e) {
+      setError(e.message || 'Login failed');
+    }
+    setLoading(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+    setError('');
     try {
-      if (isSignUp) {
+      if (isSignup) {
         await signup(email, password, role, name);
-        showToast(`Account created successfully as ${role.toUpperCase()}!`, 'success');
       } else {
         await login(email, password);
-        showToast(`Logged in successfully! Redirecting...`, 'success');
       }
-      handleRedirect(role);
-    } catch (err) {
-      showToast(err.message || 'Authentication error', 'danger');
-    } finally {
-      setLoading(false);
+      navigate(role === 'doctor' ? '/doctor' : '/patient');
+    } catch (e) {
+      setError(e.message || 'Authentication failed');
     }
-  };
-
-  const handleQuickDemoRole = async (targetRole) => {
-    setLoading(true);
-    await switchDemoRole(targetRole);
-    showToast(`Logged in as Demo ${targetRole.toUpperCase()}!`, 'success');
-    handleRedirect(targetRole);
     setLoading(false);
   };
 
-  const handleSendOtp = () => {
-    if (!phone) {
-      showToast('Please enter your mobile phone number.', 'warning');
-      return;
-    }
-    setOtpSent(true);
-    showToast(`📱 OTP code [9821] sent to ${phone}!`, 'info');
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp !== '9821' && otp !== '1234') {
-      showToast('Invalid OTP. Use demo code 9821.', 'danger');
-      return;
-    }
-    await handleQuickDemoRole(role);
-  };
-
-  const handleFaceLogin = () => {
-    setFaceScanning(true);
-    showToast('📸 Face ID Scanner active... Align your face in camera.', 'info');
-    setTimeout(async () => {
-      setFaceScanning(false);
-      showToast('✅ Face Authenticated! Biometric Hash verified.', 'success');
-      await handleQuickDemoRole(role);
-    }, 2500);
-  };
-
   return (
-    <div className="page" style={{ background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)', padding: '30px 16px' }}>
-      <ToastContainer />
-      <div style={{ maxWidth: 500, width: '100%' }}>
-        
-        {/* Quick Demo Switcher */}
-        <div style={{ background: '#1e293b', color: '#fff', borderRadius: 16, padding: '14px 18px', marginBottom: 20, border: '1px solid #334155' }}>
-          <div style={{ fontSize: '.75rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-            ⚡ Fast 1-Click Role Login
+    <div className="page" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: 'calc(100vh - 60px)', background: '#f8fafb', padding: '40px 24px',
+    }}>
+      <div style={{ maxWidth: 440, width: '100%' }}>
+
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+            background: 'linear-gradient(135deg, #1a73e8, #0f9d58)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: '1.4rem',
+          }}>
+            <i className="fa-solid fa-notes-medical"></i>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {[
-              { id: 'patient', label: '👤 Patient' },
-              { id: 'doctor', label: '👨‍⚕️ Doctor' },
-              { id: 'nurse', label: '🩺 Nurse' },
-              { id: 'pharmacist', label: '💊 Pharmacist' },
-              { id: 'admin', label: '🏥 Admin' },
-              { id: 'family', label: '👨‍👩‍👧 Family' },
-            ].map(r => (
-              <button
-                key={r.id}
-                onClick={() => handleQuickDemoRole(r.id)}
-                style={{ background: '#334155', border: '1px solid #475569', color: '#fff', padding: '8px 6px', borderRadius: 8, fontSize: '.78rem', cursor: 'pointer', fontWeight: 600 }}
-              >
-                {r.label}
-              </button>
-            ))}
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 4 }}>MediTrust AI</h1>
+          <p style={{ fontSize: '.9rem', color: '#5f6368' }}>AI Clinical Consultation Documentation</p>
+        </div>
+
+        {/* Quick Demo Login */}
+        <div className="card" style={{ marginBottom: 16, padding: 20 }}>
+          <div style={{ fontSize: '.8rem', fontWeight: 700, color: '#5f6368', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Quick Demo Login
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <button
+              onClick={() => handleDemoLogin('doctor')}
+              disabled={loading}
+              className="btn"
+              style={{
+                padding: '14px', border: '2px solid #1a73e8', borderRadius: 12,
+                background: '#f0f7ff', color: '#1a73e8', flexDirection: 'column',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <i className="fa-solid fa-user-doctor" style={{ fontSize: '1.2rem' }}></i>
+              <span style={{ fontWeight: 700 }}>Doctor</span>
+              <span style={{ fontSize: '.7rem', color: '#5f6368', fontWeight: 400 }}>Dr. Arjun Mehta</span>
+            </button>
+            <button
+              onClick={() => handleDemoLogin('patient')}
+              disabled={loading}
+              className="btn"
+              style={{
+                padding: '14px', border: '2px solid #0f9d58', borderRadius: 12,
+                background: '#f0faf4', color: '#0f9d58', flexDirection: 'column',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <i className="fa-solid fa-user" style={{ fontSize: '1.2rem' }}></i>
+              <span style={{ fontWeight: 700 }}>Patient</span>
+              <span style={{ fontSize: '.7rem', color: '#5f6368', fontWeight: 400 }}>Rahul Sharma</span>
+            </button>
           </div>
         </div>
 
-        {/* Main Auth Card */}
-        <div className="card" style={{ padding: '32px 28px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 6 }}>🏥</div>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>{isSignUp ? 'Create MediTrust Account' : 'Welcome to MediTrust AI'}</h2>
-            <p style={{ color: 'var(--text2)', fontSize: '.84rem', marginTop: 4 }}>Select your healthcare role to continue</p>
-          </div>
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ flex: 1, height: 1, background: '#e0e3e8' }} />
+          <span style={{ fontSize: '.75rem', color: '#9aa0a6', fontWeight: 500 }}>or use credentials</span>
+          <div style={{ flex: 1, height: 1, background: '#e0e3e8' }} />
+        </div>
 
-          {/* Role Selector Pills */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 20 }}>
-            {['patient', 'doctor', 'nurse', 'pharmacist', 'admin', 'family'].map(r => (
-              <button
-                key={r}
-                type="button"
-                className={`btn btn-sm ${role === r ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setRole(r)}
-                style={{ textTransform: 'capitalize', fontSize: '.75rem', padding: '6px 4px', justifyContent: 'center' }}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-
-          {/* Login Method Tabs */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
-            {[
-              { id: 'email', label: 'Email' },
-              { id: 'otp', label: 'Mobile OTP' },
-              { id: 'face', label: 'Face ID' },
-            ].map(m => (
-              <button
-                key={m.id}
-                type="button"
-                className={`btn btn-sm ${loginMethod === m.id ? 'btn-secondary' : 'btn-outline'}`}
-                onClick={() => setLoginMethod(m.id)}
-                style={{ flex: 1, justifyContent: 'center' }}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Login Method 1: Email & Password */}
-          {loginMethod === 'email' && (
-            <form onSubmit={handleSubmit}>
-              {isSignUp && (
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: '.78rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Full Name</label>
-                  <input className="input-field" value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Rahul Sharma" />
-                </div>
-              )}
-
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: '.78rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Email Address</label>
-                <input className="input-field" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder={`${role}@demo.com`} />
-              </div>
-
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: '.78rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Password</label>
-                <input className="input-field" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
-              </div>
-
-              <button className="btn btn-primary btn-lg w-full" type="submit" disabled={loading} style={{ justifyContent: 'center', height: 46 }}>
-                {loading ? 'Authenticating...' : isSignUp ? 'Create Account' : 'Sign In'}
-              </button>
-            </form>
+        {/* Login/Signup Form */}
+        <div className="card" style={{ padding: 24 }}>
+          {error && (
+            <div style={{
+              background: '#fce8e6', color: '#d93025', padding: '10px 14px',
+              borderRadius: 8, fontSize: '.82rem', marginBottom: 16,
+              border: '1px solid #ffcdd2',
+            }}>
+              {error}
+            </div>
           )}
 
-          {/* Login Method 2: Mobile OTP */}
-          {loginMethod === 'otp' && (
-            <div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: '.78rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Mobile Number</label>
-                <input className="input-field" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 98765 43210" />
-              </div>
-
-              {!otpSent ? (
-                <button className="btn btn-primary w-full" onClick={handleSendOtp} style={{ justifyContent: 'center', height: 44 }}>
-                  📱 Send OTP Code
-                </button>
-              ) : (
-                <div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={{ fontSize: '.78rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Enter 4-Digit OTP (Demo Code: 9821)</label>
-                    <input className="input-field" value={otp} onChange={e => setOtp(e.target.value)} placeholder="9821" style={{ letterSpacing: 4, textAlign: 'center', fontSize: '1.2rem', fontWeight: 800 }} />
-                  </div>
-                  <button className="btn btn-primary w-full" onClick={handleVerifyOtp} style={{ justifyContent: 'center', height: 44 }}>
-                    Verify & Login
+          <form onSubmit={handleSubmit}>
+            {/* Role Selection */}
+            <div className="form-group">
+              <label className="form-label">I am a</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {['doctor', 'patient'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    style={{
+                      padding: '10px', border: `2px solid ${role === r ? (r === 'doctor' ? '#1a73e8' : '#0f9d58') : '#e0e3e8'}`,
+                      borderRadius: 8, background: role === r ? (r === 'doctor' ? '#f0f7ff' : '#f0faf4') : '#fff',
+                      color: role === r ? (r === 'doctor' ? '#1a73e8' : '#0f9d58') : '#5f6368',
+                      fontWeight: 600, fontSize: '.85rem', cursor: 'pointer', textTransform: 'capitalize',
+                    }}
+                  >
+                    <i className={`fa-solid ${r === 'doctor' ? 'fa-user-doctor' : 'fa-user'}`} style={{ marginRight: 6 }}></i>
+                    {r}
                   </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Login Method 3: Face ID Placeholder */}
-          {loginMethod === 'face' && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ height: 160, background: '#1e293b', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 4 }}>{faceScanning ? '📸 ⚡' : '👤'}</div>
-                <div style={{ fontSize: '.84rem', color: '#38bdf8' }}>{faceScanning ? 'Scanning Biometrics...' : 'Click below to start camera scan'}</div>
+                ))}
               </div>
-              <button className="btn btn-primary w-full" onClick={handleFaceLogin} disabled={faceScanning} style={{ justifyContent: 'center', height: 44 }}>
-                <i className="fa-solid fa-camera"></i> {faceScanning ? 'Scanning...' : 'Authenticate with Face ID'}
-              </button>
             </div>
-          )}
 
-          {/* Google Sign In */}
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <div style={{ fontSize: '.75rem', color: 'var(--text2)', marginBottom: 12 }}>OR CONTINUE WITH</div>
-            <button className="btn btn-outline w-full" onClick={async () => { await loginWithGoogle(); handleRedirect(role); }} style={{ justifyContent: 'center', height: 44 }}>
-              <i className="fa-brands fa-google" style={{ color: '#db4437' }}></i> Sign in with Google
+            {isSignup && (
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" required />
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" required />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" required />
+            </div>
+
+            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}>
+              {loading ? 'Please wait...' : (isSignup ? 'Create Account' : 'Login')}
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button onClick={() => setIsSignup(!isSignup)} style={{
+              background: 'none', border: 'none', color: '#1a73e8',
+              fontSize: '.84rem', cursor: 'pointer', fontWeight: 500,
+            }}>
+              {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign up"}
             </button>
           </div>
-
-          {/* Toggle Sign Up / Sign In */}
-          <div style={{ textAlign: 'center', marginTop: 20, fontSize: '.84rem' }}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button onClick={() => setIsSignUp(!isSignUp)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}>
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </button>
-          </div>
-
         </div>
       </div>
     </div>
