@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "docker:up": "docker-compose up --build",
-    "docker:down": "docker-compose down"
+    "dev": "python run_app.py",
+    "start": "python run_app.py",
+    "test": "python -m pytest tests/test_medtrust_clinical.py -v"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

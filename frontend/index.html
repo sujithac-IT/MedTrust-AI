@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedTrust AI - Clinical Telehealth & 17-Section AI Case Sheet Platform</title>
+  <meta name="description" content="Hospital telehealth and academic clinical platform with real-time speech diarization, 17-section AI clinical case sheets, doctor electronic sign-off, and multilingual summaries in 6 Indian languages." />
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-teal-500 selection:text-white">
+
+  <!-- Top Global Navigation Bar -->
+  <header class="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand Logo & Hospital Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-teal-500/20 text-white font-bold text-xl ring-2 ring-teal-400/30">
+          <i data-lucide="activity" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight font-heading bg-gradient-to-r from-white via-slate-100 to-teal-300 bg-clip-text text-transparent">
+              MedTrust AI
+            </h1>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/30">
+              v1.0 Clinical
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">
+            Apollo MedTrust University Teaching Hospital • Telehealth & Documentation Division
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50 text-xs sm:text-sm font-medium">
+        <button id="navTabConsultation" class="nav-btn active flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all" onclick="switchMainTab('consultation')">
+          <i data-lucide="video" class="w-4 h-4"></i>
+          <span>Live Telehealth</span>
+        </button>
+        <button id="navTabCaseSheet" class="nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all" onclick="switchMainTab('casesheet')">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>17-Section Studio</span>
+        </button>
+        <button id="navTabMultilingual" class="nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all" onclick="switchMainTab('multilingual')">
+          <i data-lucide="languages" class="w-4 h-4"></i>
+          <span>Patient Voice (TTS)</span>
+        </button>
+        <button id="navTabPatients" class="nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all" onclick="switchMainTab('patients')">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Patients</span>
+        </button>
+      </nav>
+
+      <!-- Right Area: Dual Engine Status & Role Switcher -->
+      <div class="flex items-center gap-3">
+        <!-- Dual Engine Badge -->
+        <div id="engineStatusBadge" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-300" title="Dual-Engine: Gemini AI + Offline Clinical NLP Fallback">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="engineStatusText">Offline Clinical NLP</span>
+        </div>
+
+        <!-- 1-Click Role Switcher -->
+        <div class="flex items-center gap-2 bg-slate-800/90 border border-slate-700/70 rounded-xl px-2 py-1">
+          <img id="currentRoleAvatar" src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100" class="w-7 h-7 rounded-lg object-cover ring-1 ring-teal-500/50" alt="Avatar" />
+          <div class="text-left leading-tight hidden lg:block">
+            <div id="currentRoleName" class="text-xs font-semibold text-white">Dr. Rajesh Sharma</div>
+            <div id="currentRoleTitle" class="text-[10px] text-teal-400">Attending Doctor</div>
+          </div>
+          <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-slate-200 text-xs font-medium rounded-lg px-2 py-1 border border-slate-700 outline-none focus:border-teal-500 cursor-pointer">
+            <option value="doc-1">Dr. Rajesh Sharma (Doctor)</option>
+            <option value="stu-1">Sneha Patel (Intern Student)</option>
+            <option value="pat-1">K. Sundaram (Patient)</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Global Sub-Header: Active Consultation Bar -->
+  <section class="bg-slate-900/50 border-b border-slate-800/60 px-4 lg:px-8 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-3">
+        <span class="text-slate-400 font-medium">Active Consultation:</span>
+        <select id="consultationSelector" onchange="loadConsultationDetails(this.value)" class="bg-slate-800 text-teal-300 font-mono text-xs px-3 py-1 rounded-lg border border-slate-700 outline-none focus:border-teal-400">
+          <option value="">Loading consultations...</option>
+        </select>
+        <span id="consultationStatusBadge" class="status-pill status-in-progress">In Progress</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="openNewConsultationModal()" class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-medium transition-all shadow-sm shadow-teal-600/30">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+          <span>New Consultation</span>
+        </button>
+        <button onclick="openPatientModal()" class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition-all">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+          <span>Register Patient</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
+
+    <!-- ================================================================= -->
+    <!-- TAB 1: LIVE CONSULTATION & GOOGLE MEET THEATER                     -->
+    <!-- ================================================================= -->
+    <div id="tabConsultation" class="main-tab-content block space-y-6">
+      
+      <!-- Google Meet Integration Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-teal-950/30 to-slate-900 border border-teal-500/20 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400">
+            <i data-lucide="video" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-white">Google Meet Spaces API Telehealth Room</span>
+              <span id="meetCodeTag" class="font-mono text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-teal-300">mt-cardio-room</span>
+            </div>
+            <p id="meetSpaceUri" class="text-xs text-slate-400 font-mono">spaces/mt-84920481 • Google Calendar Sync Enabled</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a id="directMeetLink" href="https://meet.google.com" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition-all shadow-md shadow-teal-500/20">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span>Open Google Meet</span>
+          </a>
+          <a id="calendarEventLink" href="#" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition-all">
+            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+            <span>Add to Calendar</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Video & Stage Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 8 Cols: Dual Feed Video & Controls & Waveform -->
+        <div class="lg:col-span-8 space-y-4">
+          
+          <!-- Dual Video Stage -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Feed 1: Doctor / Student Feed -->
+            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden aspect-video shadow-2xl group">
+              <!-- Live Video Element -->
+              <video id="localVideoFeed" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
+              <!-- Avatar / Off Camera Placeholder -->
+              <div id="localVideoPlaceholder" class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 p-6 text-center">
+                <img id="doctorStageAvatar" src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300" class="w-20 h-20 rounded-full ring-4 ring-teal-500/30 shadow-lg object-cover mb-3" alt="Doctor" />
+                <div class="text-sm font-bold text-white" id="doctorStageName">Dr. Rajesh Sharma, MD</div>
+                <div class="text-xs text-teal-400">Host (Senior Attending Physician)</div>
+              </div>
+
+              <!-- Top Left Tag -->
+              <div class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700/60 flex items-center gap-2 text-xs">
+                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                <span class="font-medium text-slate-200">Doctor / Student Host</span>
+              </div>
+
+              <!-- Bottom Right Mic Status -->
+              <div class="absolute bottom-3 right-3 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700/60 text-xs">
+                <i id="micIndicatorIcon" data-lucide="mic" class="w-3.5 h-3.5 text-teal-400"></i>
+                <span id="micDbDisplay" class="font-mono text-[11px] text-teal-300">-42 dB</span>
+              </div>
+            </div>
+
+            <!-- Feed 2: Patient Feed -->
+            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden aspect-video shadow-2xl group">
+              <!-- Patient Video / Avatar -->
+              <div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 p-6 text-center">
+                <img id="patientStageAvatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300" class="w-20 h-20 rounded-full ring-4 ring-emerald-500/30 shadow-lg object-cover mb-3" alt="Patient" />
+                <div class="text-sm font-bold text-white" id="patientStageName">K. Sundaram</div>
+                <div class="text-xs text-emerald-400">Patient (MRN: MT-2026-0841)</div>
+              </div>
+
+              <!-- Top Left Tag -->
+              <div class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700/60 flex items-center gap-2 text-xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="font-medium text-slate-200">Patient Attendee</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Real-time Audio Waveform Canvas & Telehealth Controls Bar -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                <i data-lucide="waveform" class="w-4 h-4 text-teal-400"></i>
+                <span>Real-Time Audio Oscillogram & Diarization Spectrogram</span>
+              </div>
+              <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                <span>Sample Rate: 48 kHz</span>
+                <span>•</span>
+                <span class="text-teal-400 font-bold">FFT Size: 512</span>
+              </div>
+            </div>
+
+            <!-- Waveform Canvas -->
+            <div class="w-full h-16 bg-slate-950/90 rounded-xl border border-slate-800 overflow-hidden relative">
+              <canvas id="waveformCanvas" class="w-full h-full"></canvas>
+            </div>
+
+            <!-- Telehealth Call Action Buttons -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+              
+              <!-- Left: Call Duration Timer -->
+              <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-300">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                <span>REC</span>
+                <span id="callTimer" class="font-bold text-teal-400">00:00</span>
+              </div>
+
+              <!-- Center: Control Toggles -->
+              <div class="flex items-center gap-2">
+                <button id="btnToggleMic" onclick="toggleMicrophone()" class="ctrl-btn bg-slate-800 hover:bg-slate-700 text-slate-200 p-2.5 rounded-xl border border-slate-700 transition-all" title="Toggle Microphone">
+                  <i data-lucide="mic" class="w-4 h-4"></i>
+                </button>
+                <button id="btnToggleCam" onclick="toggleCamera()" class="ctrl-btn bg-slate-800 hover:bg-slate-700 text-slate-200 p-2.5 rounded-xl border border-slate-700 transition-all" title="Toggle Camera">
+                  <i data-lucide="camera" class="w-4 h-4"></i>
+                </button>
+                <button onclick="triggerScreenShare()" class="ctrl-btn bg-slate-800 hover:bg-slate-700 text-slate-200 p-2.5 rounded-xl border border-slate-700 transition-all" title="Screen Share">
+                  <i data-lucide="monitor" class="w-4 h-4"></i>
+                </button>
+                <button onclick="toggleLiveSpeechRecognition()" id="btnSpeechRec" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition-all shadow-md shadow-teal-500/20">
+                  <i data-lucide="mic" class="w-3.5 h-3.5"></i>
+                  <span id="speechRecBtnText">Start Speech-to-Text</span>
+                </button>
+              </div>
+
+              <!-- Right: Jump to Case Sheet -->
+              <div>
+                <button onclick="generateAndOpenCaseSheet()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                  <span>Synthesize 17-Section Sheet</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right 4 Cols: Live Clinical Simulation & Speech Transcript Panel -->
+        <div class="lg:col-span-4 flex flex-col space-y-4">
+          
+          <!-- Scenario Selector Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Load Clinical Sample</span>
+              <span class="text-[11px] text-teal-400 font-medium">5 Specialty Cases</span>
+            </div>
+            <div class="flex gap-2">
+              <select id="scenarioSelector" class="w-full bg-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 border border-slate-700 outline-none focus:border-teal-500">
+                <option value="cardiology">Cardiology: Angina & ACE-I Cough</option>
+                <option value="endocrinology">Endocrinology: T2DM & Neuropathy</option>
+                <option value="pediatrics">Pediatrics: Nocturnal Asthma Wheeze</option>
+                <option value="gastroenterology">Gastroenterology: NSAID Peptic Dyspepsia</option>
+                <option value="psychiatry">Psychiatry: GAD & Somatic Palpitations</option>
+              </select>
+              <button onclick="loadSelectedScenario()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium shrink-0 transition-all">
+                Load
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="simulateLiveConsultationTurns()" id="btnSimulate" class="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition-all">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Animate Live Consultation Dialogue</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Transcript Stream Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col space-y-3 shadow-xl min-h-[420px]">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Live Turn Diarization</h3>
+              </div>
+              <span id="turnCounterBadge" class="text-[11px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">0 turns</span>
+            </div>
+
+            <!-- Dialogue Stream List -->
+            <div id="transcriptContainer" class="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[380px] text-xs">
+              <div class="text-center py-12 text-slate-500 italic">
+                No spoken turns recorded yet.<br>Load a sample scenario above or click "Start Speech-to-Text" to dictate live.
+              </div>
+            </div>
+
+            <!-- Manual Turn Dictation / Input Box -->
+            <div class="pt-2 border-t border-slate-800 space-y-2">
+              <div class="flex items-center gap-2">
+                <select id="turnSpeakerSelect" class="bg-slate-800 text-slate-300 text-[11px] rounded-lg px-2 py-1 border border-slate-700">
+                  <option value="doctor">Doctor</option>
+                  <option value="student">Student</option>
+                  <option value="patient">Patient</option>
+                </select>
+                <input id="turnTextInput" type="text" placeholder="Type or dictate spoken utterance..." class="flex-1 bg-slate-950 text-slate-100 text-xs rounded-lg px-3 py-1.5 border border-slate-800 focus:border-teal-500 outline-none" onkeydown="if(event.key==='Enter') sendManualTurn()" />
+                <button onclick="sendManualTurn()" class="p-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TAB 2: 17-SECTION CASE SHEET STUDIO                               -->
+    <!-- ================================================================= -->
+    <div id="tabCaseSheet" class="main-tab-content hidden space-y-6">
+      
+      <!-- Studio Control Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-white">17-Section AI Clinical Case Sheet</h2>
+              <span id="caseSheetStatusTag" class="status-pill status-draft">Draft Mode</span>
+            </div>
+            <p class="text-xs text-slate-400">Structured Medical Synthesis & Senior Physician Sign-off</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Mode Toggle (Edit / Preview) -->
+          <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
+            <button id="btnModeEdit" onclick="setCaseSheetMode('edit')" class="mode-btn active px-3 py-1 rounded-lg">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5 inline mr-1"></i> Edit Mode
+            </button>
+            <button id="btnModePreview" onclick="setCaseSheetMode('preview')" class="mode-btn px-3 py-1 rounded-lg">
+              <i data-lucide="eye" class="w-3.5 h-3.5 inline mr-1"></i> Hospital Preview
+            </button>
+          </div>
+
+          <!-- AI Regenerate Button -->
+          <button onclick="generateCaseSheetAI()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/30">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Run AI Extraction</span>
+          </button>
+
+          <!-- Save Edits Button -->
+          <button id="btnSaveCaseSheet" onclick="saveCaseSheetEdits()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            <span>Save Edits</span>
+          </button>
+
+          <!-- Doctor Sign Off Button -->
+          <button id="btnDoctorSignOff" onclick="openDoctorSignModal()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-600/25">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>Doctor Sign-Off & Lock</span>
+          </button>
+
+          <!-- Print / PDF Button -->
+          <button onclick="printApprovedCaseSheet()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Print Sheet</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Audit Stamp Lock Banner (Visible when locked) -->
+      <div id="lockedAuditBanner" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="font-bold text-emerald-300 flex items-center gap-2">
+              <span>RECORD AUDIT-LOCKED & COUNTERSIGNED</span>
+              <span class="font-mono text-[11px] bg-emerald-900/60 px-2 py-0.5 rounded text-emerald-200" id="bannerStampHash">sha256:...</span>
+            </div>
+            <p class="text-slate-300 text-[11px]" id="bannerDoctorCreds">Signed by Dr. Rajesh Sharma, MD (TNMC-84920) • Immutability Active</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <img id="bannerSignaturePreview" src="" class="h-8 max-w-[120px] object-contain bg-white rounded p-1" alt="Doctor Signature" />
+        </div>
+      </div>
+
+      <!-- 17-Section Sheet Content Container -->
+      <div id="caseSheetContentBox" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 lg:p-10 shadow-2xl space-y-8">
+        
+        <!-- Hospital Letterhead (Printed style) -->
+        <div class="border-b-2 border-teal-500/50 pb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="text-2xl font-black tracking-tight text-white font-heading">
+              APOLLO MEDTRUST UNIVERSITY TEACHING HOSPITAL
+            </div>
+            <div class="text-xs uppercase tracking-widest text-teal-400 font-semibold mt-0.5">
+              Clinical Telehealth Services & Academic Medical Documentation Division
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="sheetBarcode" class="font-mono text-xl tracking-widest bg-slate-950 px-3 py-1 rounded-lg border border-slate-800 text-teal-300">
+              *MT-2026-0841*
+            </div>
+            <div class="text-xs text-slate-400 mt-1">EMR Clinical Dossier</div>
+          </div>
+        </div>
+
+        <!-- Section 1: Patient Demographics & Care Team Card -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-xs">
+          <div>
+            <span class="text-slate-400 block">Patient Full Name</span>
+            <span id="csPatientName" class="font-bold text-slate-100 text-sm">K. Sundaram</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">MRN / Barcode</span>
+            <span id="csPatientMrn" class="font-mono font-bold text-teal-300 text-sm">MT-2026-0841</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Age / Gender / Blood</span>
+            <span id="csPatientDemographics" class="font-bold text-slate-100 text-sm">58 yrs • Male • O+</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Attending Consultant</span>
+            <span id="csAttendingDoc" class="font-bold text-teal-400 text-sm">Dr. Rajesh Sharma, MD</span>
+          </div>
+        </div>
+
+        <!-- Sections 2 & 5: Chief Complaint & Duration -->
+        <div class="space-y-3">
+          <div class="section-badge">1. Chief Complaint & 2. Duration / Onset</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="field-label">Chief Presenting Complaint</label>
+              <textarea id="csChiefComplaint" rows="2" class="input-field" placeholder="Patient's primary presenting symptoms..."></textarea>
+            </div>
+            <div class="space-y-1">
+              <label class="field-label">Duration & Onset Pattern</label>
+              <textarea id="csDurationOnset" rows="2" class="input-field" placeholder="Time since onset and evolution..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: History of Present Illness (HPI) -->
+        <div class="space-y-2">
+          <div class="section-badge">3. History of Present Illness (HPI)</div>
+          <textarea id="csHpi" rows="4" class="input-field" placeholder="Detailed chronological medical narrative..."></textarea>
+        </div>
+
+        <!-- Section 4: Symptoms Checklist with Severity Badges -->
+        <div class="space-y-2">
+          <div class="section-badge">4. Symptoms Checklist & Clinical Severity</div>
+          <div id="csSymptomsList" class="flex flex-wrap gap-2 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+            <!-- Badges rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Sections 6, 8, 9, 10: Medical History, Allergies, Family & Social History -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="space-y-2">
+            <div class="section-badge">5. Past Medical History</div>
+            <textarea id="csPastHistory" rows="3" class="input-field" placeholder="Chronic conditions and past hospitalizations..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="section-badge">6. Allergies & Adverse Drug Reactions</div>
+            <textarea id="csAllergies" rows="3" class="input-field border-red-500/40 focus:border-red-400" placeholder="Allergies and adverse drug events..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="section-badge">7. Family Medical History</div>
+            <textarea id="csFamilyHistory" rows="3" class="input-field" placeholder="Hereditary illnesses..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="section-badge">8. Social & Occupational History</div>
+            <textarea id="csSocialHistory" rows="3" class="input-field" placeholder="Lifestyle, diet, tobacco, alcohol, occupation..."></textarea>
+          </div>
+
+        </div>
+
+        <!-- Section 7: Current Medications Dynamic Interactive Table -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="section-badge">9. Prescriptions & Active Medications (Dynamic Table)</div>
+            <button onclick="addMedicationRow()" id="btnAddMedRow" class="flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600/50 text-teal-300 border border-teal-500/40 text-xs font-semibold">
+              <i data-lucide="plus" class="w-3 h-3"></i>
+              <span>Add Drug Row</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-950 text-slate-300 font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Drug Name</th>
+                  <th class="p-3">Dosage</th>
+                  <th class="p-3">Frequency</th>
+                  <th class="p-3">Route</th>
+                  <th class="p-3">Duration</th>
+                  <th class="p-3">Instructions</th>
+                  <th class="p-3 w-12">Action</th>
+                </tr>
+              </thead>
+              <tbody id="csMedsTableBody" class="divide-y divide-slate-800 bg-slate-950/40">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 11: Doctor Observations & Vitals -->
+        <div class="space-y-3">
+          <div class="section-badge">10. Doctor Observations & Clinical Vitals</div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="vital-card">
+              <span class="vital-label">Blood Pressure</span>
+              <input id="vitalBp" type="text" class="vital-val" value="152/94 mmHg" />
+            </div>
+            <div class="vital-card">
+              <span class="vital-label">Pulse Rate</span>
+              <input id="vitalPulse" type="text" class="vital-val" value="84 bpm" />
+            </div>
+            <div class="vital-card">
+              <span class="vital-label">Respiratory Rate</span>
+              <input id="vitalRr" type="text" class="vital-val" value="18 /min" />
+            </div>
+            <div class="vital-card">
+              <span class="vital-label">Temperature</span>
+              <input id="vitalTemp" type="text" class="vital-val" value="98.6°F" />
+            </div>
+            <div class="vital-card">
+              <span class="vital-label">SpO2 Oxygen</span>
+              <input id="vitalSpo2" type="text" class="vital-val" value="98%" />
+            </div>
+            <div class="vital-card">
+              <span class="vital-label">BMI</span>
+              <input id="vitalBmi" type="text" class="vital-val" value="27.4 kg/m²" />
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Systemic Physical Examination Notes</label>
+            <textarea id="vitalExam" rows="2" class="input-field" placeholder="Auscultation, heart sounds, abdominal exam..."></textarea>
+          </div>
+        </div>
+
+        <!-- Section 12 & 13: Investigations & Provisional Assessment -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <div class="section-badge">11. Recommended Investigations & Diagnostics</div>
+            <textarea id="csInvestigations" rows="4" class="input-field" placeholder="ECG, Echo, Labs..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="section-badge">12. Provisional Assessment & Differential Diagnosis (ICD-10)</div>
+            <textarea id="csAssessment" rows="4" class="input-field border-emerald-500/40 text-emerald-200" placeholder="Primary diagnostic impression and ICD codes..."></textarea>
+          </div>
+        </div>
+
+        <!-- Section 14: Treatment Plan -->
+        <div class="space-y-2">
+          <div class="section-badge">13. Comprehensive Treatment Plan & Management</div>
+          <textarea id="csTreatmentPlan" rows="4" class="input-field" placeholder="Action plan, lifestyle changes, dosage adjustments..."></textarea>
+        </div>
+
+        <!-- Section 15: Follow-Up & Red Flag Warning Signs -->
+        <div class="space-y-3">
+          <div class="section-badge">14. Follow-up Schedule & Emergency Red Flags</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="field-label">Scheduled Clinic Review</label>
+              <textarea id="csReview" rows="3" class="input-field"></textarea>
+            </div>
+            <div class="space-y-1">
+              <label class="field-label text-red-400">Emergency Red-Flag Triggers (Seek Urgent ER)</label>
+              <textarea id="csRedFlags" rows="3" class="input-field border-red-500/40 text-red-200"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 16 & 17: Clinical Gaps & Uncertainties -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <div class="section-badge">15. Missing / Incomplete Information (AI Flagged)</div>
+            <textarea id="csMissingInfo" rows="3" class="input-field border-amber-500/40 text-amber-200"></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="section-badge">16. Uncertainties Requiring Senior Consultation</div>
+            <textarea id="csUncertainInfo" rows="3" class="input-field border-indigo-500/40 text-indigo-200"></textarea>
+          </div>
+        </div>
+
+        <!-- Section 17: Doctor Digital Counter-Signature Stamp Block -->
+        <div class="pt-6 border-t border-slate-800 flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient Acknowledgment</div>
+            <p class="text-xs text-slate-500 max-w-sm mt-1">
+              The therapeutic options, investigations, and emergency red-flags have been explained to the patient in their primary language.
+            </p>
+          </div>
+
+          <div class="text-right space-y-2">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Attending Physician Sign-Off</div>
+            <div id="csSignatureDisplay" class="min-h-[60px] flex items-center justify-end">
+              <span class="text-xs text-slate-600 italic">Signature pending approval</span>
+            </div>
+            <div id="csDoctorNameDisplay" class="font-bold text-white text-sm">Dr. Rajesh Sharma, MD</div>
+            <div id="csDoctorRegDisplay" class="text-xs text-teal-400">TNMC-84920 • Senior Consultant</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: MULTILINGUAL VOICE HUB (TTS IN 6 INDIAN LANGUAGES)          -->
+    <!-- ================================================================= -->
+    <div id="tabMultilingual" class="main-tab-content hidden space-y-6">
+      
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+            <i data-lucide="volume-2" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-white">Multilingual Patient Takeaway & Voice Playback</h2>
+            <p class="text-xs text-slate-400">
+              Native Text-to-Speech audio synthesis for patients across 6 Indian languages
+            </p>
+          </div>
+        </div>
+
+        <!-- Language Switcher Tabs -->
+        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
+          <button onclick="selectLanguageTab('english')" class="lang-tab active" id="langTabEnglish">English</button>
+          <button onclick="selectLanguageTab('tamil')" class="lang-tab" id="langTabTamil">தமிழ் (Tamil)</button>
+          <button onclick="selectLanguageTab('hindi')" class="lang-tab" id="langTabHindi">हिन्दी (Hindi)</button>
+          <button onclick="selectLanguageTab('telugu')" class="lang-tab" id="langTabTelugu">తెలుగు (Telugu)</button>
+          <button onclick="selectLanguageTab('malayalam')" class="lang-tab" id="langTabMalayalam">മലയാളം (Malayalam)</button>
+          <button onclick="selectLanguageTab('kannada')" class="lang-tab" id="langTabKannada">ಕನ್ನಡ (Kannada)</button>
+        </div>
+
+        <!-- Active Language Content & TTS Player Controls -->
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between">
+            <span id="activeLangTitle" class="text-sm font-bold text-teal-300">English Consultation Summary</span>
+            
+            <!-- Voice Speed Selector -->
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <span>Voice Rate:</span>
+              <select id="voiceSpeedSelect" class="bg-slate-900 text-slate-200 px-2 py-1 rounded border border-slate-700">
+                <option value="0.85">0.85x (Slow & Clear)</option>
+                <option value="1.0" selected>1.0x (Normal)</option>
+                <option value="1.15">1.15x (Fast)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Language Text Box -->
+          <div id="multilingualTextDisplay" class="text-sm text-slate-200 leading-relaxed font-sans bg-slate-900/60 p-4 rounded-xl border border-slate-800 min-h-[140px]">
+            Please synthesize the AI Case Sheet first to generate multilingual patient instructions.
+          </div>
+
+          <!-- Audio Controls Player -->
+          <div class="flex items-center gap-3 pt-2">
+            <button onclick="playCurrentSummaryVoice()" id="btnPlayVoice" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-teal-500/25 transition-all">
+              <i data-lucide="play" class="w-4 h-4"></i>
+              <span>Listen to Voice</span>
+            </button>
+            <button onclick="pauseSummaryVoice()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all" title="Pause Audio">
+              <i data-lucide="pause" class="w-4 h-4"></i>
+            </button>
+            <button onclick="stopSummaryVoice()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all" title="Stop Audio">
+              <i data-lucide="square" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TAB 4: PATIENT MANAGEMENT HUB                                     -->
+    <!-- ================================================================= -->
+    <div id="tabPatients" class="main-tab-content hidden space-y-6">
+      
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">Patient Clinical Directory</h2>
+            <p class="text-xs text-slate-400">Searchable EMR records with automatic DOB-to-age calculator</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <input id="patientSearchInput" type="text" placeholder="Search by name, MRN, phone..." oninput="searchPatients(this.value)" class="bg-slate-950 text-slate-100 text-xs rounded-xl px-4 py-2 border border-slate-800 focus:border-teal-500 outline-none w-64" />
+            <button onclick="openPatientModal()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/30">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span>Register Patient</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Patients Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-950 text-slate-300 font-semibold border-b border-slate-800">
+              <tr>
+                <th class="p-3">MRN</th>
+                <th class="p-3">Patient Name</th>
+                <th class="p-3">Age / Gender</th>
+                <th class="p-3">Blood Group</th>
+                <th class="p-3">Allergies</th>
+                <th class="p-3">Chronic Conditions</th>
+                <th class="p-3">Action</th>
+              </tr>
+            </thead>
+            <tbody id="patientsTableBody" class="divide-y divide-slate-800 bg-slate-950/40">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================================================================= -->
+  <!-- MODAL 1: DOCTOR SIGN-OFF & CRYPTOGRAPHIC LOCK MODAL               -->
+  <!-- ================================================================= -->
+  <div id="modalDoctorSign" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Attending Doctor Electronic Sign-Off</h3>
+            <p class="text-[11px] text-slate-400">Legal verification and SHA-256 record locking</p>
+          </div>
+        </div>
+        <button onclick="closeDoctorSignModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Verification Checklist -->
+      <div class="space-y-2 bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs">
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" id="chkReview1" checked class="mt-0.5 accent-teal-500" />
+          <span class="text-slate-300">I have reviewed and verified the AI speech diarization and clinical findings.</span>
+        </label>
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" id="chkReview2" checked class="mt-0.5 accent-teal-500" />
+          <span class="text-slate-300">Prescription dosages, drug contraindications, and allergy safety checks passed.</span>
+        </label>
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" id="chkReview3" checked class="mt-0.5 accent-teal-500" />
+          <span class="text-slate-300">I counter-sign this document as the legally responsible attending physician.</span>
+        </label>
+      </div>
+
+      <!-- Doctor Credentials Details -->
+      <div class="grid grid-cols-2 gap-3 text-xs bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+        <div>
+          <span class="text-slate-400 block text-[10px]">Medical Council Reg No</span>
+          <span class="font-bold text-teal-300 font-mono">TNMC-84920</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block text-[10px]">Attending Physician</span>
+          <span class="font-bold text-slate-200">Dr. Rajesh Sharma, MD</span>
+        </div>
+      </div>
+
+      <!-- Electronic Signature Canvas -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-medium text-slate-300">Draw Digital Signature:</span>
+          <button onclick="clearSignatureCanvas()" class="text-xs text-red-400 hover:text-red-300">Clear</button>
+        </div>
+        <div class="bg-white rounded-xl overflow-hidden border border-slate-700 h-28 relative">
+          <canvas id="signatureCanvas" class="w-full h-full cursor-crosshair"></canvas>
+        </div>
+        <p class="text-[10px] text-slate-500">Sign with mouse or stylus stroke on canvas.</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeDoctorSignModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Cancel
+        </button>
+        <button onclick="submitDoctorSignOff()" class="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-teal-500/30 transition-all">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Approve & Lock Record</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL 2: NEW PATIENT REGISTRATION WITH AUTO-AGE CALCULATOR        -->
+  <!-- ================================================================= -->
+  <div id="modalPatient" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-5 h-5 text-teal-400"></i>
+          <h3 class="text-sm font-bold text-white">Register New Patient</h3>
+        </div>
+        <button onclick="closePatientModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="field-label">Full Name</label>
+          <input id="newPatName" type="text" placeholder="e.g. S. Meenakshi" class="input-field" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">Date of Birth</label>
+            <input id="newPatDob" type="date" class="input-field" onchange="autoCalculateAgeFromDob(this.value)" />
+          </div>
+          <div>
+            <label class="field-label">Calculated Age</label>
+            <input id="newPatAge" type="text" readonly class="input-field bg-slate-950 font-bold text-teal-300" placeholder="Auto-calculated" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">Gender</label>
+            <select id="newPatGender" class="input-field">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Blood Group</label>
+            <select id="newPatBlood" class="input-field">
+              <option value="O+">O+</option>
+              <option value="A+">A+</option>
+              <option value="B+">B+</option>
+              <option value="AB+">AB+</option>
+              <option value="O-">O-</option>
+              <option value="A-">A-</option>
+              <option value="B-">B-</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">Contact Number</label>
+          <input id="newPatContact" type="text" placeholder="+91 98400 12345" class="input-field" />
+        </div>
+
+        <div>
+          <label class="field-label">Drug Allergies (Comma separated)</label>
+          <input id="newPatAllergies" type="text" placeholder="e.g. Penicillin, Sulfa" class="input-field border-red-500/40" />
+        </div>
+
+        <div>
+          <label class="field-label">Chronic Conditions (Comma separated)</label>
+          <input id="newPatChronic" type="text" placeholder="e.g. Hypertension, Diabetes" class="input-field" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closePatientModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Cancel
+        </button>
+        <button onclick="submitNewPatient()" class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-lg shadow-teal-600/30 transition-all">
+          Save Patient
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main JavaScript Bundle -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
