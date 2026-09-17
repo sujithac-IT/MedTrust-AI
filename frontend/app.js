@@ -1,8 +1,10 @@
 // =============================================================================
 // MEDTRUST AI - CLINICAL TELEHEALTH & 17-SECTION CASE SHEET STUDIO CONTROLLER
+// Apollo MedTrust University Teaching Hospital
 // =============================================================================
 
 let currentRole = "doc-1";
+let selectedLoginRole = "doc-1";
 let currentConsultationId = "";
 let currentConsultation = null;
 let consultationsList = [];
@@ -21,7 +23,7 @@ let isMicMuted = false;
 let isCamActive = false;
 
 // Call Timer
-let callSeconds = 0;
+let callSeconds = 245; // Start with realistic in-progress consultation
 let callTimerInterval = null;
 
 // Speech Recognition
@@ -51,13 +53,90 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadConsultations();
 });
 
+// --- Landing Page vs. App Studio Navigation ---
+function showLandingPage() {
+  document.getElementById("landingView").classList.remove("hidden");
+  document.getElementById("appView").classList.add("hidden");
+  
+  document.getElementById("landingNavLinks").classList.remove("hidden");
+  document.getElementById("appNavTabs").classList.add("hidden");
+  
+  document.getElementById("landingActionBtns").classList.remove("hidden");
+  document.getElementById("appActionBtns").classList.add("hidden");
+  
+  if (window.lucide) window.lucide.createIcons();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function launchAppStudio() {
+  document.getElementById("landingView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+  
+  document.getElementById("landingNavLinks").classList.add("hidden");
+  document.getElementById("appNavTabs").classList.remove("hidden");
+  
+  document.getElementById("landingActionBtns").classList.add("hidden");
+  document.getElementById("appActionBtns").classList.remove("hidden");
+  
+  if (window.lucide) window.lucide.createIcons();
+  
+  // Re-adjust waveform canvas width
+  if (waveformCanvas && waveformCanvas.parentElement) {
+    waveformCanvas.width = waveformCanvas.parentElement.clientWidth || 600;
+  }
+}
+
+// --- Login Modal & Persona Selection ---
+function openLoginModal() {
+  document.getElementById("modalLogin").classList.remove("hidden");
+}
+
+function closeLoginModal() {
+  document.getElementById("modalLogin").classList.add("hidden");
+}
+
+function selectLoginPersona(roleId) {
+  selectedLoginRole = roleId;
+  const personas = [
+    { id: "personaDoc", role: "doc-1" },
+    { id: "personaStudent", role: "stu-1" },
+    { id: "personaPatient", role: "pat-1" }
+  ];
+  
+  personas.forEach(p => {
+    const el = document.getElementById(p.id);
+    if (!el) return;
+    const icon = el.querySelector("i");
+    if (p.role === roleId) {
+      el.className = "persona-btn active p-3 rounded-xl border border-teal-500 bg-teal-50/50 flex items-center justify-between cursor-pointer transition-all";
+      if (icon) {
+        icon.setAttribute("data-lucide", "check-circle");
+        icon.className = "w-4 h-4 text-teal-600";
+      }
+    } else {
+      el.className = "persona-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-all";
+      if (icon) {
+        icon.setAttribute("data-lucide", "circle");
+        icon.className = "w-4 h-4 text-slate-300";
+      }
+    }
+  });
+  
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function executeLoginAndEnter() {
+  fetchUsersAndSetRole(selectedLoginRole);
+  closeLoginModal();
+  launchAppStudio();
+}
+
 // --- Audio Waveform Visualizer ---
 function initAudioWaveformCanvas() {
   waveformCanvas = document.getElementById("waveformCanvas");
   if (!waveformCanvas) return;
   waveformCtx = waveformCanvas.getContext("2d");
   
-  // Resize to actual display size
   waveformCanvas.width = waveformCanvas.parentElement.clientWidth || 600;
   waveformCanvas.height = waveformCanvas.parentElement.clientHeight || 70;
   
@@ -74,7 +153,7 @@ function drawWaveformPlaceholder() {
     waveformCtx.fillStyle = "#020617";
     waveformCtx.fillRect(0, 0, width, height);
     
-    // Draw animated medical sinus/audio wave
+    // Draw medical audio sine oscillogram
     waveformCtx.lineWidth = 2;
     waveformCtx.strokeStyle = "#14b8a6";
     waveformCtx.beginPath();
@@ -92,7 +171,6 @@ function drawWaveformPlaceholder() {
     waveformCtx.stroke();
     phase += 0.08;
     
-    // Decibel meter display
     const dbElem = document.getElementById("micDbDisplay");
     if (dbElem && !isMicMuted) {
       const simulatedDb = -36 - Math.floor(Math.abs(Math.sin(phase * 0.5) * 18));
@@ -107,7 +185,6 @@ function drawWaveformPlaceholder() {
 // --- Call Timer ---
 function startCallTimer() {
   if (callTimerInterval) clearInterval(callTimerInterval);
-  callSeconds = 245; // Start with realistic in-progress consultation
   const timerElem = document.getElementById("callTimer");
   
   callTimerInterval = setInterval(() => {
@@ -125,26 +202,24 @@ async function toggleCamera() {
   const btn = document.getElementById("btnToggleCam");
   
   if (isCamActive) {
-    // Turn off
     if (localStream) {
       localStream.getVideoTracks().forEach(track => track.stop());
     }
     videoElem.classList.add("hidden");
     placeholder.classList.remove("hidden");
     isCamActive = false;
-    btn.classList.remove("bg-teal-600");
+    btn.classList.remove("bg-teal-600", "text-white");
   } else {
-    // Turn on
     try {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       videoElem.srcObject = localStream;
       videoElem.classList.remove("hidden");
       placeholder.classList.add("hidden");
       isCamActive = true;
-      btn.classList.add("bg-teal-600");
+      btn.classList.add("bg-teal-600", "text-white");
     } catch (err) {
-      console.warn("Webcam access declined or not present. Using virtual doctor stage.", err);
-      alert("Camera device not detected or permission denied. Retaining high-definition clinical avatar preview.");
+      console.warn("Webcam access unavailable or declined.", err);
+      alert("Camera device not detected or permission denied. Retaining high-definition clinical host avatar.");
     }
   }
 }
@@ -156,7 +231,7 @@ function toggleMicrophone() {
   
   isMicMuted = !isMicMuted;
   if (isMicMuted) {
-    btn.classList.add("bg-red-600");
+    btn.classList.add("bg-red-600", "text-white");
     icon.classList.remove("text-teal-400");
     icon.classList.add("text-red-400");
     if (dbElem) dbElem.innerText = "MUTED";
@@ -164,7 +239,7 @@ function toggleMicrophone() {
       localStream.getAudioTracks().forEach(t => t.enabled = false);
     }
   } else {
-    btn.classList.remove("bg-red-600");
+    btn.classList.remove("bg-red-600", "text-white");
     icon.classList.add("text-teal-400");
     icon.classList.remove("text-red-400");
     if (dbElem) dbElem.innerText = "-42 dB";
@@ -185,7 +260,7 @@ function triggerScreenShare() {
       })
       .catch(e => console.log("Screen share cancelled", e));
   } else {
-    alert("Screen sharing is available on desktop browsers with HTTPS or localhost.");
+    alert("Screen sharing is supported on desktop browsers with HTTPS or localhost.");
   }
 }
 
@@ -205,7 +280,7 @@ function toggleLiveSpeechRecognition() {
   
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) {
-    alert("Web Speech API is not supported in this browser. You can dictate by typing in the dialogue box or click 'Animate Live Consultation Dialogue'.");
+    alert("Web Speech API is not supported in this browser. You can type spoken utterances or click 'Animate Live Consultation Dialogue'.");
     return;
   }
   
@@ -250,10 +325,10 @@ function toggleLiveSpeechRecognition() {
   }
 }
 
-// --- Navigation Tabs ---
+// --- Navigation Tabs inside App Studio ---
 function switchMainTab(tabName) {
   document.querySelectorAll(".main-tab-content").forEach(el => el.classList.add("hidden"));
-  document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".app-tab-btn").forEach(el => el.classList.remove("active"));
   
   if (tabName === "consultation") {
     document.getElementById("tabConsultation").classList.remove("hidden");
@@ -276,24 +351,16 @@ function switchMainTab(tabName) {
 async function fetchUsersAndSetRole(roleId) {
   currentRole = roleId;
   const avatarElem = document.getElementById("currentRoleAvatar");
-  const nameElem = document.getElementById("currentRoleName");
-  const titleElem = document.getElementById("currentRoleTitle");
   const selector = document.getElementById("roleSelector");
   
   if (selector) selector.value = roleId;
   
   if (roleId === "doc-1") {
-    avatarElem.src = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150";
-    nameElem.innerText = "Dr. Rajesh Sharma, MD";
-    titleElem.innerText = "Attending Physician";
+    if (avatarElem) avatarElem.src = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150";
   } else if (roleId === "stu-1") {
-    avatarElem.src = "https://images.unsplash.com/photo-1594824813681-364e03102fb2?w=150";
-    nameElem.innerText = "Sneha Patel";
-    titleElem.innerText = "MBBS Intern Student";
+    if (avatarElem) avatarElem.src = "https://images.unsplash.com/photo-1594824813681-364e03102fb2?w=150";
   } else {
-    avatarElem.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150";
-    nameElem.innerText = "K. Sundaram";
-    titleElem.innerText = "Patient (MRN: MT-2026-0841)";
+    if (avatarElem) avatarElem.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150";
   }
   
   updateDoctorSignButtonState();
@@ -325,7 +392,6 @@ async function loadConsultations() {
     selector.innerHTML = "";
     
     if (consultationsList.length === 0) {
-      // Create initial consultation
       const initRes = await fetch("/api/consultations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -384,14 +450,10 @@ async function loadConsultationDetails(cid) {
         populateMultilingualUI(currentConsultation.multilingual_summary);
       }
     } else {
-      // Clear or set default
       clearCaseSheetUI();
     }
     
-    // Locked State Banner
     checkAndDisplayLockState();
-    
-    // Connect WebSocket
     connectConsultationWs(cid);
   } catch (err) {
     console.error("Error loading consultation details:", err);
@@ -417,7 +479,7 @@ function checkAndDisplayLockState() {
       
       const sigDisplay = document.getElementById("csSignatureDisplay");
       if (sigDisplay) {
-        sigDisplay.innerHTML = `<img src="${app.signature_data_url}" class="h-12 max-w-[150px] object-contain bg-white rounded p-1 shadow" alt="Doctor Signature" />`;
+        sigDisplay.innerHTML = `<img src="${app.signature_data_url}" class="h-10 max-w-[140px] object-contain bg-white rounded p-1 border border-slate-300" alt="Doctor Signature" />`;
       }
     }
     
@@ -469,7 +531,7 @@ function renderTranscript(turns) {
   
   if (!turns || turns.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-12 text-slate-500 italic">
+      <div class="text-center py-12 text-slate-400 italic">
         No spoken turns recorded yet.<br>Load a sample scenario above or click "Start Speech-to-Text" to dictate live.
       </div>
     `;
@@ -488,14 +550,14 @@ function renderTranscript(turns) {
     }
     
     return `
-      <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 space-y-1">
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
         <div class="flex items-center justify-between text-[11px]">
           <span class="px-2 py-0.5 rounded font-bold uppercase tracking-wider ${badgeClass}">
             [${roleTitle}] ${t.speaker_name || ""}
           </span>
           <span class="text-slate-500 font-mono">${t.timestamp}</span>
         </div>
-        <p class="text-slate-200 text-xs leading-relaxed pt-1">${t.text}</p>
+        <p class="text-slate-800 text-xs leading-relaxed pt-1">${t.text}</p>
       </div>
     `;
   }).join("");
@@ -577,7 +639,7 @@ function sendManualTurn() {
   });
 }
 
-// --- Scenario Quick Loader & Animation ---
+// --- Scenario Quick Loader & Live Simulation ---
 async function loadSelectedScenario() {
   const key = document.getElementById("scenarioSelector").value;
   if (!currentConsultationId) return;
@@ -596,10 +658,7 @@ async function loadSelectedScenario() {
 
 async function simulateLiveConsultationTurns() {
   const key = document.getElementById("scenarioSelector").value;
-  const res = await fetch("/api/scenarios");
-  const scenarios = await res.json();
   
-  // Clear current transcript first
   currentConsultation.transcript = [];
   renderTranscript([]);
   
@@ -607,7 +666,6 @@ async function simulateLiveConsultationTurns() {
   simBtn.disabled = true;
   simBtn.innerText = "Simulating Live Dialogue...";
   
-  // Fetch detailed turns
   const detailRes = await fetch(`/api/scenarios/${key}/load-into/${currentConsultationId}`, { method: "POST" });
   const data = await detailRes.json();
   const allTurns = data.consultation.transcript;
@@ -643,7 +701,6 @@ async function generateCaseSheetAI() {
     populateCaseSheetUI(data.case_sheet);
     populateMultilingualUI(data.multilingual_summary);
     
-    // Switch to casesheet tab to display result
     switchMainTab("casesheet");
   } catch (err) {
     console.error("AI Case Sheet synthesis failed:", err);
@@ -730,7 +787,7 @@ function clearCaseSheetUI() {
   document.getElementById("csChiefComplaint").value = "";
   document.getElementById("csDurationOnset").value = "";
   document.getElementById("csHpi").value = "";
-  document.getElementById("csSymptomsList").innerHTML = "<span class='text-xs text-slate-500 italic'>Click 'Run AI Extraction' to populate clinical findings</span>";
+  document.getElementById("csSymptomsList").innerHTML = "<span class='text-xs text-slate-400 italic'>Click 'Run AI Extraction' to populate clinical findings</span>";
   document.getElementById("csPastHistory").value = "";
   document.getElementById("csAllergies").value = "";
   document.getElementById("csFamilyHistory").value = "";
@@ -751,21 +808,21 @@ function renderMedicationsTable(meds) {
   if (!tbody) return;
   
   if (!meds || meds.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500 italic">No medications recorded. Click '+ Add Drug Row' to add.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 italic">No medications recorded. Click '+ Add Drug Row' to add.</td></tr>`;
     return;
   }
   
   tbody.innerHTML = meds.map((m, idx) => `
-    <tr data-index="${idx}" class="hover:bg-slate-900/60 transition-colors">
-      <td class="p-2"><input type="text" class="med-input font-bold text-teal-300" value="${m.drug}" /></td>
-      <td class="p-2"><input type="text" class="med-input" value="${m.dosage}" /></td>
-      <td class="p-2"><input type="text" class="med-input" value="${m.frequency}" /></td>
-      <td class="p-2"><input type="text" class="med-input" value="${m.route || 'Oral'}" /></td>
-      <td class="p-2"><input type="text" class="med-input" value="${m.duration}" /></td>
-      <td class="p-2"><input type="text" class="med-input" value="${m.instructions}" /></td>
+    <tr data-index="${idx}" class="hover:bg-slate-50 transition-colors">
+      <td class="p-2"><input type="text" class="input-field font-bold text-teal-800" value="${m.drug}" /></td>
+      <td class="p-2"><input type="text" class="input-field" value="${m.dosage}" /></td>
+      <td class="p-2"><input type="text" class="input-field" value="${m.frequency}" /></td>
+      <td class="p-2"><input type="text" class="input-field" value="${m.route || 'Oral'}" /></td>
+      <td class="p-2"><input type="text" class="input-field" value="${m.duration}" /></td>
+      <td class="p-2"><input type="text" class="input-field" value="${m.instructions}" /></td>
       <td class="p-2 text-center">
-        <button onclick="removeMedicationRow(${idx})" class="text-red-400 hover:text-red-300 p-1">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        <button onclick="removeMedicationRow(${idx})" class="text-red-500 hover:text-red-700 p-1">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </td>
     </tr>
@@ -898,7 +955,7 @@ function setCaseSheetMode(mode) {
   }
 }
 
-// --- Doctor Sign-Off & Electronic Signature Canvas ---
+// --- Doctor Sign-Off & Electronic Signature Pad ---
 function initSignatureCanvas() {
   sigCanvas = document.getElementById("signatureCanvas");
   if (!sigCanvas) return;
@@ -934,7 +991,6 @@ function initSignatureCanvas() {
   
   window.addEventListener("mouseup", () => isDrawingSig = false);
   
-  // Touch
   sigCanvas.addEventListener("touchstart", (e) => {
     isDrawingSig = true;
     const pos = getPos(e);
@@ -962,7 +1018,7 @@ function clearSignatureCanvas() {
 
 function openDoctorSignModal() {
   if (currentRole !== "doc-1") {
-    alert("Only Senior Attending Doctors (e.g. Dr. Rajesh Sharma, MD) have authority to counter-sign and lock clinical documentation. Switching your role to Doctor.");
+    alert("Only Senior Attending Doctors (e.g. Dr. Rajesh Sharma, MD) have authority to counter-sign and lock clinical records. Switching your role to Doctor.");
     fetchUsersAndSetRole("doc-1");
   }
   
@@ -973,7 +1029,6 @@ function openDoctorSignModal() {
   
   document.getElementById("modalDoctorSign").classList.remove("hidden");
   clearSignatureCanvas();
-  // Draw an authentic stylized signature sample as default if blank
   drawDefaultStylizedSignature();
 }
 
@@ -1104,7 +1159,6 @@ function playCurrentSummaryVoice() {
   };
   utterance.lang = langCodes[activeLanguage] || "en-IN";
   
-  // Try to find native voice
   const voices = window.speechSynthesis.getVoices();
   const matchedVoice = voices.find(v => v.lang.startsWith(utterance.lang.slice(0, 2)));
   if (matchedVoice) utterance.voice = matchedVoice;
@@ -1135,15 +1189,15 @@ async function loadPatients(query = "") {
     if (!tbody) return;
     
     tbody.innerHTML = patientsList.map(p => `
-      <tr class="hover:bg-slate-900/60 transition-colors">
-        <td class="p-3 font-mono text-teal-300 font-bold">${p.mrn}</td>
-        <td class="p-3 font-semibold text-white">${p.name}</td>
-        <td class="p-3">${p.age} yrs • ${p.gender}</td>
-        <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-bold text-teal-400">${p.blood_group}</span></td>
-        <td class="p-3 text-red-300">${(p.allergies || []).join(", ") || "None known"}</td>
-        <td class="p-3 text-slate-300">${(p.chronic_conditions || []).join(", ") || "None"}</td>
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="p-3 font-mono text-teal-700 font-bold">${p.mrn}</td>
+        <td class="p-3 font-semibold text-slate-900">${p.name}</td>
+        <td class="p-3 text-slate-700">${p.age} yrs • ${p.gender}</td>
+        <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-300 font-bold text-slate-800">${p.blood_group}</span></td>
+        <td class="p-3 text-red-700">${(p.allergies || []).join(", ") || "None known"}</td>
+        <td class="p-3 text-slate-600">${(p.chronic_conditions || []).join(", ") || "None"}</td>
         <td class="p-3">
-          <button onclick="startConsultationForPatient('${p.id}')" class="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600/60 text-teal-200 border border-teal-500/40 text-xs font-semibold">
+          <button onclick="startConsultationForPatient('${p.id}')" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 text-xs font-bold">
             Start Call
           </button>
         </td>
@@ -1228,6 +1282,7 @@ async function startConsultationForPatient(patientId) {
     await loadConsultations();
     document.getElementById("consultationSelector").value = newCons.id;
     await loadConsultationDetails(newCons.id);
+    launchAppStudio();
     switchMainTab("consultation");
   } catch (e) {
     alert("Could not start consultation: " + e.message);
