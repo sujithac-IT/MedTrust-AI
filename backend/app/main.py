@@ -7,19 +7,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 
-from .models import (
-    Patient, PatientCreate, Consultation, CaseSheet17Sections,
-    DoctorApproval, DoctorSignRequest, TranscriptTurn, CaseSheetUpdateRequest
-)
-from .database import (
-    init_db, list_patients, get_patient_by_id, create_patient,
-    get_consultation, list_consultations, save_consultation,
-    list_users, get_user, calculate_age
-)
-from .meet_service import generate_meet_space, CLINICAL_SCENARIOS
-from .ai_casesheet_service import (
-    generate_casesheet, generate_multilingual_summary, compute_audit_hash
-)
+try:
+    from .models import (
+        Patient, PatientCreate, Consultation, CaseSheet17Sections,
+        DoctorApproval, DoctorSignRequest, TranscriptTurn, CaseSheetUpdateRequest
+    )
+    from .database import (
+        init_db, list_patients, get_patient_by_id, create_patient,
+        get_consultation, list_consultations, save_consultation,
+        list_users, get_user, calculate_age
+    )
+    from .meet_service import generate_meet_space, CLINICAL_SCENARIOS
+    from .ai_casesheet_service import (
+        generate_casesheet, generate_multilingual_summary, compute_audit_hash
+    )
+except ImportError:
+    from backend.app.models import (
+        Patient, PatientCreate, Consultation, CaseSheet17Sections,
+        DoctorApproval, DoctorSignRequest, TranscriptTurn, CaseSheetUpdateRequest
+    )
+    from backend.app.database import (
+        init_db, list_patients, get_patient_by_id, create_patient,
+        get_consultation, list_consultations, save_consultation,
+        list_users, get_user, calculate_age
+    )
+    from backend.app.meet_service import generate_meet_space, CLINICAL_SCENARIOS
+    from backend.app.ai_casesheet_service import (
+        generate_casesheet, generate_multilingual_summary, compute_audit_hash
+    )
 
 from contextlib import asynccontextmanager
 

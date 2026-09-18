@@ -5,10 +5,16 @@ import hashlib
 from typing import Dict, Any, List, Optional
 import requests
 
-from .models import (
-    CaseSheet17Sections, MedicationItem, SymptomItem,
-    MultilingualSummary, TranscriptTurn
-)
+try:
+    from .models import (
+        CaseSheet17Sections, MedicationItem, SymptomItem,
+        MultilingualSummary, TranscriptTurn
+    )
+except ImportError:
+    from backend.app.models import (
+        CaseSheet17Sections, MedicationItem, SymptomItem,
+        MultilingualSummary, TranscriptTurn
+    )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 

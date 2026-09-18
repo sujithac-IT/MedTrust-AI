@@ -4,12 +4,34 @@ import os
 from datetime import datetime, date
 from typing import List, Optional, Dict, Any
 
-from .models import (
-    User, Patient, Consultation, CaseSheet17Sections,
-    DoctorApproval, MultilingualSummary, Role
-)
+try:
+    from .models import (
+        User, Patient, Consultation, CaseSheet17Sections,
+        DoctorApproval, MultilingualSummary, Role
+    )
+except ImportError:
+    from backend.app.models import (
+        User, Patient, Consultation, CaseSheet17Sections,
+        DoctorApproval, MultilingualSummary, Role
+    )
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "medtrust.db")
+def get_db_path() -> str:
+    """Resolve database path safely for local, containerized, and serverless (Vercel/AWS Lambda) environments."""
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return "/tmp/medtrust.db"
+    
+    env_path = os.environ.get("DB_PATH")
+    if env_path:
+        return env_path
+        
+    local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+    try:
+        os.makedirs(local_dir, exist_ok=True)
+        return os.path.join(local_dir, "medtrust.db")
+    except (OSError, PermissionError):
+        return "/tmp/medtrust.db"
+
+DB_PATH = get_db_path()
 
 def calculate_age(dob_str: str) -> int:
     """Calculate age accurately from DOB in YYYY-MM-DD or DD/MM/YYYY format."""
@@ -30,8 +52,12 @@ def calculate_age(dob_str: str) -> int:
         return 0
 
 def get_db_connection():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    db_path = get_db_path()
+    try:
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    except Exception:
+        pass
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
